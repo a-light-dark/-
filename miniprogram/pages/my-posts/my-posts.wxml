@@ -1,0 +1,68 @@
+<!-- 我的内容：我的帖子 / 历史评论 -->
+<view class="page">
+
+  <view class="tabs">
+    <view class="tab {{tab === 'posts' ? 'active' : ''}}" data-tab="posts" bindtap="switchTab">我的帖子</view>
+    <view class="tab {{tab === 'comments' ? 'active' : ''}}" data-tab="comments" bindtap="switchTab">历史评论</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:if="{{!loading && tab === 'posts'}}">
+    <view wx:if="{{posts.length === 0}}" class="empty">还没有发过帖子，去首页发一条吧～</view>
+
+    <view
+      class="post card"
+      wx:for="{{posts}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goPostDetail"
+    >
+      <view class="post-content">{{item.content}}</view>
+
+      <view class="post-imgs" wx:if="{{item.images.length}}">
+        <image
+          wx:for="{{item.images}}"
+          wx:for-item="pic"
+          wx:key="*this"
+          class="post-img"
+          src="{{pic}}"
+          mode="aspectFill"
+        />
+      </view>
+
+      <view class="post-foot">
+        <view class="post-tags">
+          <view class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this"># {{tag}}</view>
+        </view>
+        <view class="post-counts">
+          <text class="count">👍 {{item.likeCount}}</text>
+          <text class="count">💬 {{item.commentCount}}</text>
+        </view>
+      </view>
+
+      <view class="post-time">{{item.time}}</view>
+    </view>
+  </block>
+
+  <block wx:if="{{!loading && tab === 'comments'}}">
+    <view wx:if="{{comments.length === 0}}" class="empty">还没有评论过，去帖子里聊两句吧～</view>
+
+    <view
+      class="cmt card"
+      wx:for="{{comments}}"
+      wx:key="id"
+      data-index="{{index}}"
+      bindtap="goCommentPost"
+    >
+      <view class="cmt-content">{{item.content}}</view>
+
+      <view class="cmt-post" wx:if="{{item.postExists}}">原帖：{{item.postContent}}</view>
+      <view class="cmt-post cmt-gone" wx:else>原帖已经被删除了</view>
+
+      <view class="cmt-time">{{item.time}}</view>
+    </view>
+  </block>
+
+  <view wx:if="{{offline}}" class="offline">当前是本地演示数据</view>
+</view>

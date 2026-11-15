@@ -1,0 +1,64 @@
+<!-- pages/board/board.wxml —— 本周榜单 -->
+<view class="wrap">
+
+  <view class="head">
+    <view class="head-title">🏆 本周榜单</view>
+    <view class="head-sub">最近 7 天的数据 · 下拉可刷新</view>
+  </view>
+
+  <view wx:if="{{offline}}" class="offline-tip">当前是本地演示数据（云开发没连上）</view>
+
+  <!-- 本周热帖 -->
+  <view class="sec">
+    <view class="sec-title">本周热帖 Top5</view>
+
+    <view
+      class="row"
+      wx:for="{{hot}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="rank {{index < 3 ? 'rank-top' : ''}}">{{index + 1}}</view>
+      <view class="row-main">
+        <view class="row-text">{{item.content}}</view>
+        <view class="row-meta">
+          <text>{{item.nickname}}</text>
+          <text class="dot">·</text>
+          <text>👍 {{item.likeCount}}</text>
+          <text class="dot">·</text>
+          <text>💬 {{item.commentCount}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{!loading && hot.length === 0}}" class="hint">这周还没有帖子，去发一条就能上榜～</view>
+  </view>
+
+  <!-- 活跃同学 -->
+  <view class="sec">
+    <view class="sec-title">活跃同学 Top5</view>
+    <view class="sec-sub">发帖 2 分 / 评论 1 分</view>
+
+    <view
+      class="row"
+      wx:for="{{users}}"
+      wx:key="nickname"
+      data-name="{{item.nickname}}"
+      bindtap="goUser"
+    >
+      <view class="rank {{index < 3 ? 'rank-top' : ''}}">{{index + 1}}</view>
+      <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar">{{item.avatar}}</view>
+      <view class="row-main">
+        <view class="row-text">{{item.nickname}}</view>
+        <view class="row-meta">发帖 {{item.postCount}} · 评论 {{item.commentCount}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{!loading && users.length === 0}}" class="hint">这周还没有活跃同学</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="hint">加载中…</view>
+
+</view>

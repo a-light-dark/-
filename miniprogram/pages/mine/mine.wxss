@@ -1,0 +1,116 @@
+/* 我的页面样式 */
+
+.page {
+  padding-bottom: 60rpx;
+}
+
+/* 顶部个人信息 */
+.user-card {
+  background: #fff;
+  padding: 40rpx 32rpx 32rpx;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.nickname {
+  font-size: 44rpx;
+  font-weight: 800;
+}
+
+.school {
+  font-size: 26rpx;
+  color: #999;
+  margin-top: 10rpx;
+}
+
+.avatar.big {
+  width: 140rpx;
+  height: 140rpx;
+  background: #f0faf4;
+  color: #07c160;
+  font-size: 72rpx;
+}
+
+/* 统计数字 */
+.user-stats {
+  display: flex;
+  align-items: flex-end;
+  margin-top: 36rpx;
+}
+
+.stat-item {
+  margin-right: 56rpx;
+}
+
+.stat-num {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.user-actions {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16rpx;
+}
+
+.pill {
+  font-size: 24rpx;
+  padding: 14rpx 30rpx;
+  border-radius: 12rpx;
+}
+
+.pill.light {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.pill.dark {
+  background: #333;
+  color: #fff;
+}
+
+/* 两列菜单 */
+.menu-grid {
+  display: flex;
+  flex-wrap: wrap;
+  background: #fff;
+  margin-top: 20rpx;
+  padding: 20rpx 32rpx;
+}
+
+.menu-item {
+  width: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26rpx 0;
+  font-size: 28rpx;
+}
+
+.arrow {
+  color: #ccc;
+  font-size: 32rpx;
+  margin-right: 24rpx;
+}
+
+/* uid */
+.uid {
+  text-align: center;
+  font-size: 22rpx;
+  color: #ccc;
+  margin-top: 60rpx;
+}

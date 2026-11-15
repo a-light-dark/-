@@ -1,0 +1,98 @@
+/* pages/account/account.wxss —— 注销账号 */
+.page {
+  min-height: 100vh;
+  background: #f6f6f6;
+  padding: 24rpx 24rpx 60rpx;
+  box-sizing: border-box;
+}
+
+.warn-card {
+  background: #fff7f6;
+  border: 1rpx solid #ffd9d4;
+  border-radius: 20rpx;
+  padding: 28rpx;
+}
+
+.warn-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #d93025;
+  margin-bottom: 16rpx;
+}
+
+.warn-line {
+  font-size: 26rpx;
+  color: #6b4b47;
+  line-height: 1.75;
+  margin-bottom: 10rpx;
+}
+
+.warn-line.tip {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx dashed #ffd9d4;
+}
+
+.warn-item {
+  font-size: 26rpx;
+  color: #6b4b47;
+  line-height: 1.9;
+}
+
+.info-card {
+  margin-top: 24rpx;
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 8rpx 28rpx;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 96rpx;
+  border-bottom: 1rpx solid #f0f2f5;
+}
+
+.info-card .info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 28rpx;
+  color: #33404d;
+}
+
+.info-value {
+  font-size: 26rpx;
+  color: #9aa5b1;
+}
+
+.arrow {
+  color: #c3cbd4;
+  font-size: 32rpx;
+}
+
+.danger-btn {
+  margin-top: 48rpx;
+  height: 92rpx;
+  line-height: 92rpx;
+  border-radius: 46rpx;
+  background: #ffffff;
+  color: #e64340;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: 1rpx solid #f3c3c0;
+}
+
+.danger-btn[disabled] {
+  color: #c9a9a7;
+}
+
+.foot {
+  margin-top: 28rpx;
+  font-size: 23rpx;
+  color: #9aa5b1;
+  text-align: center;
+  line-height: 1.7;
+}

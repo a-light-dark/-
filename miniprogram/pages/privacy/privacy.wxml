@@ -1,0 +1,44 @@
+<!-- 隐私政策 -->
+<view class="doc">
+  <view class="doc-title">校园圈隐私政策</view>
+  <view class="doc-meta">更新日期：{{updated}}　生效日期：{{updated}}</view>
+
+  <view class="doc-p">「校园圈」非常重视你的个人信息保护。本政策说明我们收集哪些信息、如何使用与保存、你可以行使哪些权利。请你仔细阅读后再使用本服务。</view>
+
+  <view class="doc-h">一、我们收集哪些信息</view>
+  <view class="doc-p">1. <text class="b">微信身份标识（openid）</text>：你打开小程序时由微信自动生成并传入，用于区分不同用户、绑定你发布的内容。我们不会获取你的手机号、微信昵称以外的通讯录或位置信息。</view>
+  <view class="doc-p">2. <text class="b">昵称与头像</text>：由你主动设置（可从微信头像或相册选择）。头像图片会保存在微信云存储中，昵称与头像会公开展示在你发布的内容旁。</view>
+  <view class="doc-p">3. <text class="b">发布内容</text>：你发布的帖子文字、图片、话题标签，发表的评论，发布的互助悬赏（含金额文字描述），以及你的点赞、收藏、举报记录。</view>
+  <view class="doc-p">4. <text class="b">设备与日志信息</text>：为实现内容安全检测和故障排查，服务端会处理调用时间、接口错误码等基础日志，不包含你的通讯内容。</view>
+
+  <view class="doc-h">二、我们如何使用这些信息</view>
+  <view class="doc-p">（1）展示你的帖子、评论与个人主页，完成点赞、收藏、消息通知等功能；</view>
+  <view class="doc-p">（2）通过微信官方内容安全接口（msgSecCheck / imgSecCheck）检测你发布的文字与图片是否合规；</view>
+  <view class="doc-p">（3）处理举报：当其他用户举报你的内容时，向你展示的内容可能被运营方审核、删除；</view>
+  <view class="doc-p">（4）统计你已发帖数量、被点赞数量，用于在「我的」页面展示。</view>
+
+  <view class="doc-h">三、信息的存储与保护</view>
+  <view class="doc-p">1. 数据存储于微信云开发（腾讯云）境内服务器，不向境外传输。</view>
+  <view class="doc-p">2. 我们通过微信云开发的权限机制限制数据访问：普通用户只能读写自己的数据；涉及他人数据的操作（如点赞、评论、抢单、内容审核）由云函数在服务端校验身份后执行。</view>
+  <view class="doc-p">3. 图片资源设置为「所有用户可读、仅创建者可读写」，以保证帖子图片在他人浏览时可见，同时他人无法修改或删除你的图片。</view>
+
+  <view class="doc-h">四、第三方服务</view>
+  <view class="doc-p">本服务使用微信小程序平台与微信云开发（腾讯云）作为基础能力提供方。你在使用过程中产生的数据将按微信平台规则处理。除法律法规要求或你另行授权外，我们不会向其他第三方共享、转让你的个人信息。</view>
+
+  <view class="doc-h">五、你的权利</view>
+  <view class="doc-p">1. <text class="b">查看与更正</text>：「我的 → 个人资料」可修改昵称和头像。</view>
+  <view class="doc-p">2. <text class="b">删除</text>：在自己发布的帖子详情页可「删除这条帖子」，删除后帖子及其评论、点赞、收藏记录一并移除。</view>
+  <view class="doc-p">3. <text class="b">注销</text>：「我的 → 注销账号」可申请注销并删除你的资料、帖子、评论、点赞、收藏与通知记录。注销后不可恢复，请谨慎操作。</view>
+  <view class="doc-p">4. <text class="b">投诉</text>：如认为你的个人信息权益受到侵害，可通过「建议反馈」联系我们。</view>
+
+  <view class="doc-h">六、未成年人保护</view>
+  <view class="doc-p">若你是未满 14 周岁的未成年人，请在监护人陪同下阅读本政策并使用本服务。我们不会主动收集未成年人的敏感个人信息。</view>
+
+  <view class="doc-h">七、政策的更新</view>
+  <view class="doc-p">本政策可能随功能调整而更新，更新后会在本页面公示新的更新日期。重大变更时，我们会在小程序内以显著方式提示你。</view>
+
+  <view class="doc-h">八、联系我们</view>
+  <view class="doc-p">如对本政策有任何疑问，可通过「我的 → 建议反馈」联系我们，或发送邮件至运营方公示的联系邮箱。</view>
+
+  <view class="doc-foot">本政策为校园圈体验版示例文本，正式上线前将根据运营主体信息补充完善。</view>
+</view>

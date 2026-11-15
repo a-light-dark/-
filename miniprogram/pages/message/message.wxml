@@ -1,0 +1,44 @@
+<!-- 消息列表：评论 / 点赞 / 抢单通知 -->
+<view class="page">
+
+  <!-- 标题栏 -->
+  <view class="msg-head">
+    <view class="msg-title">消息列表</view>
+    <view class="read-all {{unread ? '' : 'disabled'}}" bindtap="readAll">一键置为已读</view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="empty-state">
+    <view class="empty-text">加载中…</view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{!loading && list.length === 0}}" class="empty-state">
+    <view class="empty-icon">💬</view>
+    <view class="empty-text">还没有收到消息</view>
+    <view class="empty-text small">有人评论、点赞你的帖子，或接了你的悬赏时会出现在这里</view>
+  </view>
+
+  <!-- 消息条目 -->
+  <view
+    wx:for="{{list}}"
+    wx:key="id"
+    class="notice card"
+    data-index="{{index}}"
+    bindtap="onNoticeTap"
+  >
+    <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.fromAvatar}}" mode="aspectFill" />
+    <view wx:else class="avatar">{{item.fromAvatar}}</view>
+
+    <view class="notice-body">
+      <view class="notice-head">
+        <text class="notice-nick">{{item.fromNickname}}</text>
+        <text class="notice-type">{{item.icon}}</text>
+        <text class="notice-time">{{item.time}}</text>
+      </view>
+      <view class="notice-text">{{item.text}}</view>
+    </view>
+
+    <view wx:if="{{!item.read}}" class="dot"></view>
+  </view>
+</view>

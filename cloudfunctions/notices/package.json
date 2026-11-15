@@ -1,0 +1,9 @@
+{
+  "name": "notices",
+  "version": "1.0.0",
+  "description": "消息通知：列表 / 未读数 / 单条已读 / 一键已读",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

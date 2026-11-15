@@ -1,0 +1,143 @@
+/* 举报处理（管理员） */
+.page {
+  padding: 24rpx 24rpx 60rpx;
+}
+
+.tip {
+  padding: 16rpx 8rpx 24rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 空态 / 无权限 */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 180rpx 40rpx;
+}
+
+.state-icon {
+  font-size: 72rpx;
+  margin-bottom: 20rpx;
+}
+
+.state-title {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.state-desc {
+  font-size: 26rpx;
+  color: #999;
+  text-align: center;
+  line-height: 1.7;
+}
+
+/* 举报卡片 */
+.report-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18rpx;
+}
+
+.reason {
+  padding: 6rpx 18rpx;
+  font-size: 24rpx;
+  color: #e64340;
+  background: #fdecec;
+  border-radius: 999rpx;
+}
+
+.report-time {
+  font-size: 22rpx;
+  color: #bbb;
+}
+
+/* 被举报的帖子（点一下看原文） */
+.post {
+  padding: 20rpx;
+  background: #fafafa;
+  border-radius: 12rpx;
+}
+
+.post-user {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.post-name {
+  font-size: 26rpx;
+  color: #555;
+  margin-left: 12rpx;
+}
+
+.post-time {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: #bbb;
+}
+
+.post-content {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.post-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.post-image {
+  width: 150rpx;
+  height: 150rpx;
+  border-radius: 8rpx;
+  background: #eee;
+}
+
+.post.gone {
+  font-size: 26rpx;
+  color: #bbb;
+  text-align: center;
+  padding: 30rpx 0;
+}
+
+/* 操作按钮 */
+.report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.btn {
+  padding: 12rpx 32rpx;
+  font-size: 26rpx;
+  border-radius: 999rpx;
+}
+
+.btn.ghost {
+  color: #666;
+  background: #f2f2f2;
+}
+
+.btn.danger {
+  color: #fff;
+  background: #e64340;
+}

@@ -1,0 +1,97 @@
+<!-- 发帖页：三种状态 = 选类型 / 发帖子 / 发互助 -->
+<view class="page">
+
+  <!-- ① 选发布类型 -->
+  <block wx:if="{{mode === 'choose'}}">
+    <view class="chooser-title">· 选择发布的类型 ·</view>
+
+    <view class="type-card" bindtap="choosePost">
+      <view class="type-icon post-icon">📝</view>
+      <view class="type-text">
+        <view class="type-name">发布帖子</view>
+        <view class="type-desc">写下今天的校园生活小事</view>
+      </view>
+      <view class="arrow">›</view>
+    </view>
+
+    <view class="type-card" bindtap="chooseHelp">
+      <view class="type-icon help-icon">🏃</view>
+      <view class="type-text">
+        <view class="type-name">跑腿/互助</view>
+        <view class="type-desc">发个悬赏，找同学帮忙跑腿代办</view>
+      </view>
+      <view class="arrow">›</view>
+    </view>
+  </block>
+
+  <!-- ② 发帖子 -->
+  <block wx:if="{{mode === 'post'}}">
+    <view class="back-row" bindtap="backToChoose">‹ 重新选择类型</view>
+
+    <textarea
+      class="content-input"
+      placeholder="分享你的校园生活…"
+      maxlength="500"
+      value="{{content}}"
+      bindinput="onContentInput"
+    />
+
+    <view class="section-title">图片（最多 6 张，可不选）</view>
+    <view class="image-grid">
+      <view class="image-cell" wx:for="{{images}}" wx:key="*this">
+        <image class="image-thumb" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindtap="previewImage" />
+        <view class="image-del" data-index="{{index}}" catchtap="removeImage">×</view>
+      </view>
+      <view class="image-cell image-add" wx:if="{{images.length < 6}}" bindtap="pickImages">＋</view>
+    </view>
+
+    <view class="section-title">选择话题（可多选）</view>
+    <view class="topics">
+      <view
+        class="topic {{item.checked ? 'active' : ''}}"
+        wx:for="{{topics}}"
+        wx:key="name"
+        data-name="{{item.name}}"
+        bindtap="onTopicTap"
+      ># {{item.name}}</view>
+    </view>
+
+    <!-- 匿名发布开关（我们自己的特色功能） -->
+    <view class="anon-row">
+      <view class="anon-text">
+        <view class="anon-title">匿名发布</view>
+        <view class="anon-desc">昵称显示为「匿名同学」，适合树洞</view>
+      </view>
+      <switch checked="{{anonymous}}" bindchange="onAnonymousChange" color="#07c160" />
+    </view>
+
+    <button class="submit-btn" bindtap="submitPost" disabled="{{submitting}}">发 布</button>
+  </block>
+
+  <!-- ③ 发互助 -->
+  <block wx:if="{{mode === 'help'}}">
+    <view class="back-row" bindtap="backToChoose">‹ 重新选择类型</view>
+
+    <textarea
+      class="content-input"
+      placeholder="描述你需要帮忙的事：时间、地点、要求…"
+      maxlength="300"
+      value="{{helpContent}}"
+      bindinput="onHelpInput"
+    />
+
+    <view class="section-title">悬赏金额</view>
+    <view class="amount-box">
+      <text class="yuan">¥</text>
+      <input
+        class="amount-input"
+        type="digit"
+        placeholder="例如 5.00"
+        value="{{amount}}"
+        bindinput="onAmountInput"
+      />
+    </view>
+
+    <button class="submit-btn" bindtap="submitHelp" disabled="{{submitting}}">发布需求</button>
+  </block>
+</view>

@@ -1,0 +1,68 @@
+<!-- 订单评价：双方确认完成后互相打分 -->
+<view class="page">
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:elif="{{order}}">
+    <!-- 订单摘要 -->
+    <view class="card">
+      <view class="order-line">
+        <text class="order-amount">¥{{order.amount}}</text>
+        <text class="order-status">{{order.status}}</text>
+      </view>
+      <view class="order-content">{{order.content}}</view>
+      <view class="order-people">发布人：{{order.ownerNickname || '同学'}}　接单人：{{order.takerNickname || '还没人接'}}</view>
+    </view>
+
+    <!-- 评价区 -->
+    <view class="card">
+      <view class="card-title">给 {{otherName || '对方'}} 打个分</view>
+
+      <view class="stars">
+        <view
+          class="star {{score >= item ? 'on' : ''}}"
+          wx:for="{{stars}}"
+          wx:key="*this"
+          data-score="{{item}}"
+          bindtap="onStarTap"
+        >★</view>
+        <text class="score-text">{{score}} 分</text>
+      </view>
+
+      <textarea
+        class="review-input"
+        placeholder="说说这次互助的感受（可以写快不快、有没有沟通清楚）"
+        maxlength="200"
+        value="{{text}}"
+        bindinput="onTextInput"
+      />
+      <view class="count">{{text.length}}/200</view>
+
+      <button wx:if="{{canReview}}" class="submit-btn" bindtap="submit" disabled="{{submitting}}">
+        {{submitting ? '提交中…' : '提交评价'}}
+      </button>
+
+      <view class="complain-link" bindtap="onComplain">遇到问题？点这里投诉</view>
+    </view>
+
+    <!-- 已收到的评价 -->
+    <view class="card" wx:if="{{reviews.theirReview}}">
+      <view class="card-title">对方给你的评价</view>
+      <view class="review-line">
+        <text class="review-score">{{reviews.theirReview.score}} 星</text>
+        <text class="review-text">{{reviews.theirReview.text || '（没写文字）'}}</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{reviews.myReview}}">
+      <view class="card-title">你给出的评价</view>
+      <view class="review-line">
+        <text class="review-score">{{reviews.myReview.score}} 星</text>
+        <text class="review-text">{{reviews.myReview.text || '（没写文字）'}}</text>
+      </view>
+    </view>
+
+    <view class="tip">评价会显示在对方的个人主页上，互相都评完这单才算彻底结束。</view>
+  </block>
+
+  <view wx:if="{{!loading && !order}}" class="empty">订单不存在或已删除</view>
+</view>

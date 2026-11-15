@@ -1,0 +1,9 @@
+{
+  "name": "setupCollections",
+  "version": "1.0.0",
+  "description": "一次性建集合工具：favorites / reports（已存在会跳过）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

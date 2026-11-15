@@ -1,0 +1,95 @@
+<!-- 帖子详情页 -->
+<view class="page">
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <!-- 帖子正文 -->
+  <view wx:if="{{post}}" class="post card">
+    <view class="post-head" catchtap="goUser" data-openid="{{post.authorOpenid}}">
+      <image wx:if="{{post.avatarIsImage}}" class="avatar" src="{{post.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar">{{post.avatar}}</view>
+      <view class="head-info">
+        <view class="nickname">{{post.nickname}}</view>
+        <view class="time">{{post.time}}</view>
+      </view>
+    </view>
+
+    <view class="post-content">{{post.content}}</view>
+
+    <view class="post-images" wx:if="{{post.images.length > 0}}">
+      <image
+        class="post-image"
+        wx:for="{{post.images}}"
+        wx:key="*this"
+        wx:for-item="pic"
+        src="{{pic}}"
+        mode="widthFix"
+        data-src="{{pic}}"
+        bindtap="previewImage"
+      />
+    </view>
+
+    <view class="post-foot">
+      <view class="tag-list">
+        <view
+          class="tag"
+          wx:for="{{post.tags}}"
+          wx:for-item="tag"
+          wx:key="*this"
+          data-tag="{{tag}}"
+          bindtap="goTopic"
+        ># {{tag}}</view>
+      </view>
+      <view class="stats">
+        <view class="stat" bindtap="toggleLike">👍 {{post.likeCount}}</view>
+        <view class="stat" bindtap="toggleCollect">⭐ {{favorited ? '已收藏' : '收藏'}}</view>
+        <view class="stat">💬 {{comments.length}}</view>
+      </view>
+    </view>
+
+    <!-- 分享 / 自己的帖子可以删，别人的可以举报 -->
+    <view class="post-extra">
+      <button class="extra-btn share-btn" open-type="share">分享给同学</button>
+      <view class="extra-right">
+        <view wx:if="{{post.mine}}" class="extra-btn extra-danger" bindtap="onDelete">删除这条帖子</view>
+        <view wx:else class="extra-btn" bindtap="onReport">举报</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 评论列表 -->
+  <view class="comments-title">全部评论（{{comments.length}}）</view>
+
+  <view class="comment card" wx:for="{{comments}}" wx:key="id">
+    <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+    <view wx:else class="avatar">{{item.avatar}}</view>
+    <view class="comment-body">
+      <view class="comment-head">
+        <text class="nickname">{{item.nickname}}</text>
+        <text class="time">{{item.time}}</text>
+      </view>
+      <view class="comment-content">{{item.content}}</view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{!loading && comments.length === 0}}" class="empty">
+    还没有评论，来抢沙发！
+  </view>
+
+  <!-- 底部占位，防止内容被输入栏挡住 -->
+  <view class="bottom-space"></view>
+</view>
+
+<!-- 底部评论输入栏 -->
+<view class="input-bar">
+  <input
+    class="input"
+    placeholder="说点什么…"
+    value="{{inputValue}}"
+    bindinput="onInput"
+    confirm-type="send"
+    bindconfirm="sendComment"
+  />
+  <view class="send-btn" bindtap="sendComment">发送</view>
+</view>

@@ -1,0 +1,9 @@
+{
+  "name": "orderReview",
+  "version": "1.0.0",
+  "description": "订单互评：打分 + 一句评价，只允许订单双方在完成后评价一次",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

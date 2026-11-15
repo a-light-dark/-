@@ -1,0 +1,46 @@
+<!-- 我的页面 -->
+<view class="page">
+
+  <!-- 顶部个人信息 -->
+  <view class="user-card">
+    <view class="user-row" bindtap="goProfile">
+      <view class="user-info">
+        <view class="nickname">{{userInfo ? userInfo.nickname : '未登录同学'}}</view>
+        <view class="school">我的大学</view>
+      </view>
+      <image wx:if="{{hasAvatarImage}}" class="avatar big" src="{{userInfo.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar big">{{userInfo ? userInfo.avatar : '👤'}}</view>
+    </view>
+
+    <view class="user-stats">
+      <view class="stat-item">
+        <view class="stat-num">{{postCount}}</view>
+        <view class="stat-label">已发帖</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num">{{likeCount}}</view>
+        <view class="stat-label">被点赞</view>
+      </view>
+      <view class="user-actions">
+        <view class="pill light" bindtap="goRules">社区规范</view>
+        <view class="pill dark" bindtap="onUserPill">{{userInfo ? '切换社区' : '登录'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 两列菜单 -->
+  <view class="menu-grid">
+    <view
+      class="menu-item"
+      wx:for="{{menus}}"
+      wx:key="*this"
+      data-name="{{item}}"
+      bindtap="onMenuTap"
+    >
+      <text>{{item}}</text>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="uid">uid: {{uid}}</view>
+</view>

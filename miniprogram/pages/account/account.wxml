@@ -1,0 +1,30 @@
+<!-- 注销账号 -->
+<view class="page">
+
+  <view class="warn-card">
+    <view class="warn-title">注销前请确认</view>
+    <view class="warn-line">注销是不可恢复的操作，下列内容会被一并删除：</view>
+    <view class="warn-item">· 你的昵称、头像等个人资料</view>
+    <view class="warn-item">· 你发布的全部帖子、图片与评论</view>
+    <view class="warn-item">· 你的点赞、收藏记录</view>
+    <view class="warn-item">· 与你相关的消息通知、举报记录</view>
+    <view class="warn-line tip">如果你还有进行中的互助订单（待接单 / 已接单 / 待确认），需要先处理完才能注销。</view>
+  </view>
+
+  <view class="info-card">
+    <view class="info-row">
+      <text class="info-label">当前账号</text>
+      <text class="info-value">uid {{uid}}</text>
+    </view>
+    <view class="info-row" bindtap="goPrivacy">
+      <text class="info-label">隐私政策</text>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <button class="danger-btn" bindtap="onDelete" disabled="{{busy}}">
+    {{busy ? '处理中…' : '申请注销账号'}}
+  </button>
+
+  <view class="foot">注销完成后，你可以用同一个微信重新进入，会生成一个全新的身份。</view>
+</view>

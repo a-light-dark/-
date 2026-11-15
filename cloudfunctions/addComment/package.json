@@ -1,0 +1,9 @@
+{
+  "name": "addComment",
+  "version": "1.0.0",
+  "description": "发评论并给帖子评论数 +1",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

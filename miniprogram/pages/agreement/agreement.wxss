@@ -1,0 +1,42 @@
+/* pages/agreement/agreement.wxss —— 文档类页面通用样式 */
+.doc {
+  padding: 32rpx 32rpx 80rpx;
+  background: #ffffff;
+  color: #33404d;
+  font-size: 27rpx;
+  line-height: 1.85;
+}
+
+.doc-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1f2933;
+  margin-bottom: 12rpx;
+}
+
+.doc-meta {
+  font-size: 23rpx;
+  color: #94a3af;
+  margin-bottom: 28rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #eef1f4;
+}
+
+.doc-h {
+  font-size: 31rpx;
+  font-weight: 600;
+  color: #1f2933;
+  margin: 36rpx 0 12rpx;
+}
+
+.doc-p {
+  margin-bottom: 14rpx;
+  text-align: justify;
+}
+
+.doc-foot {
+  margin-top: 48rpx;
+  font-size: 23rpx;
+  color: #9aa5b1;
+  text-align: center;
+}

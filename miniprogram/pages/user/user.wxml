@@ -1,0 +1,72 @@
+<!-- 个人主页：头像/昵称从首页或详情页点进来 -->
+<view class="page">
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:elif="{{profile}}">
+    <view class="profile-head">
+      <image wx:if="{{profile.avatarIsImage}}" class="big-avatar" src="{{profile.avatar}}" mode="aspectFill" />
+      <view wx:else class="big-avatar">{{profile.avatar}}</view>
+      <view class="profile-name">{{profile.nickname}}</view>
+      <view class="profile-tag">校园圈同学</view>
+
+      <view class="profile-stats">
+        <view class="ps">
+          <text class="ps-num">{{stats.postCount}}</text>
+          <text class="ps-label">发帖</text>
+        </view>
+        <view class="ps">
+          <text class="ps-num">{{stats.likeCount}}</text>
+          <text class="ps-label">被赞</text>
+        </view>
+        <view class="ps">
+          <text class="ps-num">{{profile.score || '—'}}</text>
+          <text class="ps-label">评分</text>
+        </view>
+      </view>
+
+      <button wx:if="{{isMe}}" class="edit-btn" catchtap="goProfile">编辑资料</button>
+    </view>
+
+    <view class="sec-title">TA 的帖子（{{stats.postCount}}）</view>
+
+    <view
+      class="post"
+      wx:for="{{posts}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="post-content">{{item.content}}</view>
+
+      <view class="post-images" wx:if="{{item.images.length > 0}}">
+        <image
+          class="post-image"
+          wx:for="{{item.images}}"
+          wx:key="*this"
+          wx:for-item="pic"
+          src="{{pic}}"
+          mode="aspectFill"
+          data-pid="{{item.id}}"
+          data-src="{{pic}}"
+          catchtap="previewImage"
+        />
+      </view>
+
+      <view class="post-foot">
+        <view class="tag-list">
+          <view class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this"># {{tag}}</view>
+        </view>
+        <view class="stats">
+          <text class="stat">👍 {{item.likeCount}}</text>
+          <text class="stat">💬 {{item.commentCount}}</text>
+          <text class="stat">{{item.time}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{posts.length === 0}}" class="empty">这位同学还没有发过帖子</view>
+    <view wx:if="{{offline}}" class="empty">当前是本地演示数据</view>
+  </block>
+
+  <view wx:if="{{!loading && !profile}}" class="empty">没有找到这位同学</view>
+</view>

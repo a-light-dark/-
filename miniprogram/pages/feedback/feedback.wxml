@@ -1,0 +1,50 @@
+<!-- 建议反馈 -->
+<view class="page">
+
+  <view class="intro-card">
+    <view class="intro-title">说说你的想法</view>
+    <view class="intro-line">用着别扭的地方、想要的功能、看到的 bug，都可以写在这里。</view>
+    <view class="intro-line">同类问题会合并处理，不用重复提交。</view>
+  </view>
+
+  <view class="form-card">
+    <textarea
+      class="feedback-input"
+      value="{{content}}"
+      maxlength="{{maxLen}}"
+      placeholder="例如：希望首页能按话题筛选；互助大厅能不能加个「我发布的」入口…"
+      placeholder-class="ph"
+      bindinput="onInput"
+    />
+    <view class="counter">{{content.length}}/{{maxLen}}</view>
+
+    <input
+      class="contact-input"
+      value="{{contact}}"
+      maxlength="50"
+      placeholder="联系方式（选填）：微信号 / 邮箱，方便我们回复你"
+      placeholder-class="ph"
+      bindinput="onContactInput"
+    />
+
+    <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
+      {{submitting ? '提交中…' : '提交反馈'}}
+    </button>
+  </view>
+
+  <view class="section-title">我提交过的</view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+  <view wx:if="{{!loading && list.length === 0}}" class="empty">还没有提交过反馈</view>
+
+  <view class="fb-card" wx:for="{{list}}" wx:key="id">
+    <view class="fb-head">
+      <text class="fb-time">{{item.time}}</text>
+      <text class="fb-status {{item.done ? 'done' : ''}}">{{item.status}}</text>
+    </view>
+    <view class="fb-content">{{item.content}}</view>
+    <view wx:if="{{item.contact}}" class="fb-contact">联系方式：{{item.contact}}</view>
+  </view>
+
+  <view class="foot">反馈会进入圈主的「反馈管理」列表，处理完状态会变成「已处理」。</view>
+</view>

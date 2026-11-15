@@ -1,0 +1,173 @@
+/* 订单详情样式 */
+
+.page {
+  padding: 24rpx 24rpx 60rpx;
+}
+
+/* 状态横幅 */
+.hero {
+  border-radius: 20rpx;
+  padding: 40rpx 32rpx;
+  color: #fff;
+}
+
+.hero.pending {
+  background: linear-gradient(135deg, #ffb347, #ff9500);
+}
+
+.hero.taken {
+  background: linear-gradient(135deg, #6aa8f0, #4a90e2);
+}
+
+.hero.confirming {
+  background: linear-gradient(135deg, #b07cc6, #9b59b6);
+}
+
+.hero.done {
+  background: linear-gradient(135deg, #4ade80, #07c160);
+}
+
+.hero.cancelled {
+  background: #9e9e9e;
+}
+
+.hero-status {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.hero-amount {
+  font-size: 64rpx;
+  font-weight: 700;
+  margin-top: 8rpx;
+}
+
+/* 卡片 */
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-top: 20rpx;
+}
+
+.card-title {
+  font-size: 26rpx;
+  color: #999;
+  margin-bottom: 16rpx;
+}
+
+.content {
+  font-size: 30rpx;
+  line-height: 1.6;
+  color: #333;
+}
+
+.meta {
+  font-size: 22rpx;
+  color: #bbb;
+  margin-top: 12rpx;
+}
+
+/* 双方信息 */
+.side {
+  display: flex;
+  align-items: center;
+}
+
+.side-info {
+  margin-left: 16rpx;
+}
+
+.side-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.side-name.dim {
+  color: #bbb;
+  font-weight: 400;
+}
+
+.side-tag {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.avatar.dim {
+  color: #bbb;
+}
+
+.divider {
+  height: 1rpx;
+  background: #f0f0f0;
+  margin: 20rpx 0;
+}
+
+/* 流程 */
+.steps .step {
+  font-size: 26rpx;
+  color: #bbb;
+  padding: 10rpx 0;
+}
+
+.steps .step.on {
+  color: #07c160;
+}
+
+/* 操作 */
+.actions {
+  margin-top: 24rpx;
+}
+
+.btn {
+  text-align: center;
+  padding: 24rpx 0;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-top: 16rpx;
+}
+
+.btn.primary {
+  background: #07c160;
+  color: #fff;
+}
+
+.btn.ghost {
+  background: #fff;
+  color: #07c160;
+  border: 1rpx solid #07c160;
+}
+
+.btn.danger {
+  background: #fff;
+  color: #e64340;
+  border: 1rpx solid #e64340;
+}
+
+.btn.back {
+  border-color: #ddd;
+  color: #666;
+}
+
+.tip {
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+  margin-top: 16rpx;
+}
+
+.empty {
+  text-align: center;
+  color: #999;
+  padding: 120rpx 0;
+  font-size: 28rpx;
+}
+
+.review-line {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.7;
+  margin-bottom: 8rpx;
+}

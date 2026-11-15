@@ -1,0 +1,99 @@
+/* 我的收益样式 */
+
+.page {
+  padding: 24rpx;
+}
+
+.total-card {
+  background: linear-gradient(135deg, #07c160, #06a854);
+  border-radius: 20rpx;
+  color: #fff;
+  padding: 40rpx 32rpx;
+}
+
+.total-label {
+  font-size: 24rpx;
+  opacity: 0.85;
+}
+
+.total-value {
+  font-size: 64rpx;
+  font-weight: 700;
+  margin-top: 8rpx;
+}
+
+.total-sub {
+  font-size: 24rpx;
+  opacity: 0.85;
+  margin-top: 8rpx;
+}
+
+.list-title {
+  font-size: 26rpx;
+  color: #999;
+  margin: 32rpx 8rpx 12rpx;
+}
+
+.row {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-content {
+  font-size: 28rpx;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-meta {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+
+.row-amount {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #07c160;
+  margin-left: 16rpx;
+}
+
+.empty {
+  text-align: center;
+  color: #999;
+  padding: 100rpx 40rpx;
+  font-size: 28rpx;
+}
+
+.empty-sub {
+  font-size: 24rpx;
+  margin-top: 12rpx;
+}
+
+.go-btn {
+  display: inline-block;
+  margin-top: 32rpx;
+  background: #07c160;
+  color: #fff;
+  padding: 16rpx 48rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.offline-tip {
+  text-align: center;
+  color: #bbb;
+  font-size: 22rpx;
+  margin-top: 24rpx;
+}

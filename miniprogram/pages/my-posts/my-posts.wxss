@@ -1,0 +1,124 @@
+/* 我的内容（我的帖子 / 历史评论） */
+.page {
+  padding-bottom: 40rpx;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 40rpx;
+  padding: 22rpx 28rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.tab {
+  font-size: 28rpx;
+  color: #666;
+  position: relative;
+  padding-bottom: 10rpx;
+}
+
+.tab.active {
+  color: #07c160;
+  font-weight: 600;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 40rpx;
+  height: 6rpx;
+  border-radius: 4rpx;
+  background: #07c160;
+  transform: translateX(-50%);
+}
+
+.post,
+.cmt {
+  padding: 26rpx 28rpx;
+}
+
+.post-content,
+.cmt-content {
+  font-size: 30rpx;
+  color: #222;
+  line-height: 1.6;
+}
+
+.post-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 16rpx;
+}
+
+.post-img {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 12rpx;
+  background: #f2f2f2;
+}
+
+.post-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-top: 16rpx;
+}
+
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  flex: 1;
+}
+
+.tag {
+  font-size: 22rpx;
+  color: #666;
+  background: #f2f2f2;
+  padding: 4rpx 16rpx;
+  border-radius: 18rpx;
+}
+
+.post-counts {
+  display: flex;
+  gap: 20rpx;
+}
+
+.count {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.post-time,
+.cmt-time {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+
+.cmt-post {
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  color: #888;
+  background: #f7f7f7;
+  padding: 14rpx 18rpx;
+  border-radius: 10rpx;
+  line-height: 1.5;
+}
+
+.cmt-gone {
+  color: #bbb;
+}
+
+.offline {
+  text-align: center;
+  font-size: 22rpx;
+  color: #bbb;
+  padding: 24rpx 0 0;
+}

@@ -1,0 +1,106 @@
+<!-- 搜索页：搜帖子内容 / 话题 / 昵称 -->
+<view class="page">
+
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-box">
+      <text class="search-icon">🔍</text>
+      <input
+        class="search-input"
+        value="{{keyword}}"
+        placeholder="搜帖子、话题、同学"
+        placeholder-class="placeholder"
+        confirm-type="search"
+        focus="{{true}}"
+        bindinput="onInput"
+        bindconfirm="onConfirm"
+      />
+      <text wx:if="{{keyword}}" class="clear" bindtap="clearKeyword">✕</text>
+    </view>
+    <view class="search-btn" bindtap="onConfirm">搜索</view>
+  </view>
+
+  <!-- 还没搜：热门搜索 + 搜索历史 -->
+  <block wx:if="{{!searched}}">
+    <view class="section">
+      <view class="section-title">🔥 热门搜索</view>
+      <view class="chips">
+        <view
+          class="chip"
+          wx:for="{{hotWords}}"
+          wx:key="*this"
+          data-word="{{item}}"
+          bindtap="onHotTap"
+        >{{item}}</view>
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{history.length > 0}}">
+      <view class="section-head">
+        <view class="section-title">🕘 搜索历史</view>
+        <view class="clear-history" bindtap="clearHistory">清空</view>
+      </view>
+      <view class="chips">
+        <view
+          class="chip"
+          wx:for="{{history}}"
+          wx:key="*this"
+          data-word="{{item}}"
+          bindtap="onHistoryTap"
+        >{{item}}</view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 搜索结果 -->
+  <block wx:if="{{searched}}">
+    <view wx:if="{{loading}}" class="empty">搜索中…</view>
+    <view wx:if="{{!loading && results.length === 0}}" class="empty">
+      没有找到「{{keyword}}」相关的帖子，换个词试试
+    </view>
+    <view wx:if="{{!loading && results.length > 0}}" class="result-tip">找到 {{results.length}} 条相关帖子</view>
+
+    <view
+      class="post card"
+      wx:for="{{results}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="post-head">
+        <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+        <view wx:else class="avatar">{{item.avatar}}</view>
+        <view class="head-info">
+          <view class="nickname">{{item.nickname}}</view>
+        </view>
+        <view class="time">{{item.time}}</view>
+      </view>
+
+      <view class="post-content">{{item.content}}</view>
+
+      <view class="post-images" wx:if="{{item.images.length > 0}}">
+        <image
+          class="post-image"
+          wx:for="{{item.images}}"
+          wx:key="*this"
+          wx:for-item="pic"
+          src="{{pic}}"
+          mode="aspectFill"
+          data-pid="{{item.id}}"
+          data-src="{{pic}}"
+          catchtap="previewPostImage"
+        />
+      </view>
+
+      <view class="post-foot">
+        <view class="tag-list">
+          <view class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this"># {{tag}}</view>
+        </view>
+        <view class="stats">
+          <text class="stat">👍 {{item.likeCount}}</text>
+          <text class="stat">💬 {{item.commentCount}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

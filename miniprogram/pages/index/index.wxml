@@ -1,0 +1,147 @@
+<!-- 首页 -->
+<view class="page">
+
+  <!-- 搜索框 -->
+  <view class="search-bar" bindtap="goSearch">
+    <view class="search-box">
+      <text class="search-icon">🔍</text>
+      <text class="search-placeholder">搜索帖子、话题、同学</text>
+    </view>
+  </view>
+
+  <!-- 分类入口 -->
+  <view class="quick-entry">
+    <view
+      class="entry {{entryTag === item.tag ? 'active' : ''}}"
+      wx:for="{{entries}}"
+      wx:key="name"
+      data-tag="{{item.tag}}"
+      bindtap="onEntryTap"
+    >
+      <view class="entry-icon">{{item.icon}}</view>
+      <view class="entry-name">{{item.name}}</view>
+    </view>
+  </view>
+
+  <!-- 分类筛选提示条 -->
+  <view class="filter-bar" wx:if="{{entryTag}}">
+    <view class="filter-chip">
+      <text>正在看：{{entryTag}}</text>
+      <text class="filter-clear" catchtap="clearEntryFilter">✕ 看全部</text>
+    </view>
+  </view>
+
+  <!-- 今日热榜 -->
+  <view class="hot-row" wx:if="{{hotPost && currentTab !== followTab}}">
+    <view class="hot-main" bindtap="goHot">
+      <view class="hot-tag">🔥 {{hotIsToday ? '今日热榜' : '热门帖子'}}</view>
+      <view class="hot-text">{{hotPost.content}}</view>
+    </view>
+    <text class="hot-more" catchtap="goBoard">🏆 榜单 ›</text>
+  </view>
+
+  <!-- 公告 -->
+  <view class="banner">
+    <view class="banner-title">🎉 校园圈体验版上线啦</view>
+    <view class="banner-desc">欢迎发帖分享校园生活，有问题点「我的 → 建议反馈」。</view>
+  </view>
+
+  <!-- 板块 tab -->
+  <scroll-view class="tabs" scroll-x>
+    <view
+      class="tab {{currentTab === index ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="*this"
+      data-index="{{index}}"
+      bindtap="onTabTap"
+    >{{item}}</view>
+  </scroll-view>
+
+  <!-- 帖子列表 -->
+  <view
+    class="post"
+    wx:for="{{posts}}"
+    wx:key="id"
+    data-id="{{item.id}}"
+    bindtap="goDetail"
+  >
+    <view class="post-head" catchtap="goUser" data-openid="{{item.authorOpenid}}">
+      <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar">{{item.avatar}}</view>
+      <view class="head-info">
+        <view class="nickname">{{item.nickname}}</view>
+      </view>
+      <view class="time">{{item.time}}</view>
+    </view>
+
+    <view class="post-content">{{item.content}}</view>
+
+    <view class="post-images" wx:if="{{item.images.length > 0}}">
+      <image
+        class="post-image"
+        wx:for="{{item.images}}"
+        wx:key="*this"
+        wx:for-item="pic"
+        src="{{pic}}"
+        mode="aspectFill"
+        data-pid="{{item.id}}"
+        data-src="{{pic}}"
+        catchtap="previewPostImage"
+      />
+    </view>
+
+    <view class="post-foot">
+      <view class="tag-list">
+        <view
+          class="tag"
+          wx:for="{{item.tags}}"
+          wx:for-item="tag"
+          wx:key="*this"
+          data-tag="{{tag}}"
+          catchtap="goTopic"
+        ># {{tag}}</view>
+      </view>
+      <view class="stats">
+        <text class="stat">👍 {{item.likeCount}}</text>
+        <text class="stat">💬 {{item.commentCount}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载中 / 空状态 / 没有更多 -->
+  <view wx:if="{{loading && posts.length === 0}}" class="empty">加载中…</view>
+  <view wx:if="{{!loading && posts.length === 0 && currentTab === followTab && followedTags.length === 0}}" class="empty">
+    还没关注话题：去任意话题页点一下「关注」，这里就只看你关注的帖子
+  </view>
+  <view wx:if="{{!loading && posts.length === 0 && currentTab === followTab && followedTags.length > 0}}" class="empty">
+    你关注的话题下还没有帖子，去发一条吧
+  </view>
+  <view wx:if="{{!loading && posts.length === 0 && entryTag}}" class="empty">
+    「{{entryTag}}」分类还没有帖子，点上面的「✕ 看全部」取消筛选，或者自己发一条吧
+  </view>
+  <view wx:if="{{!loading && posts.length === 0 && !entryTag && currentTab !== followTab}}" class="empty">
+    这个板块还没有帖子，去「发帖」分享一下校园生活吧！
+  </view>
+  <view wx:if="{{loading && posts.length > 0}}" class="empty">加载更多…</view>
+  <view wx:if="{{!loading && posts.length > 0 && !hasMore}}" class="empty">没有更多了</view>
+
+  <!-- 本地演示数据提示 -->
+  <view wx:if="{{offline}}" class="empty">当前是本地演示数据，连接云开发后自动切到真实数据</view>
+
+  <!-- 隐私提示：首次进入时弹出 -->
+  <view wx:if="{{privacyVisible}}" class="privacy-mask">
+    <view class="privacy-sheet">
+      <view class="privacy-title">用户隐私保护提示</view>
+      <view class="privacy-body">
+        欢迎来到校园圈。我们会收集你的微信身份标识、昵称头像以及你发布的帖子、评论和互助信息，用于展示内容和完成互助；你的文字和图片会经过微信官方内容安全检测。
+        详见
+        <text class="privacy-link" catchtap="goPrivacy">《隐私政策》</text>和
+        <text class="privacy-link" catchtap="goAgreement">《用户协议》</text>。
+      </view>
+      <view class="privacy-actions">
+        <button class="privacy-btn ghost" catchtap="onPrivacyReject">暂不同意</button>
+        <button class="privacy-btn primary" catchtap="onPrivacyAgree">同意并继续</button>
+      </view>
+    </view>
+  </view>
+</view>

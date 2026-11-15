@@ -1,0 +1,116 @@
+/* pages/feedback-admin/feedback-admin.wxss —— 反馈管理 */
+.page {
+  min-height: 100vh;
+  background: #f6f6f6;
+  padding: 24rpx 24rpx 60rpx;
+  box-sizing: border-box;
+}
+
+.empty {
+  padding: 120rpx 0;
+  text-align: center;
+  color: #9aa5b1;
+  font-size: 26rpx;
+}
+
+.fb-card {
+  background: #ffffff;
+  border-radius: 18rpx;
+  padding: 24rpx 26rpx;
+  margin-bottom: 18rpx;
+}
+
+.fb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14rpx;
+}
+
+.fb-user {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.fb-avatar {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #f2f4f6;
+  font-size: 26rpx;
+  line-height: 48rpx;
+  text-align: center;
+  overflow: hidden;
+}
+
+.fb-nick {
+  font-size: 26rpx;
+  color: #33404d;
+  font-weight: 600;
+}
+
+.fb-time {
+  font-size: 22rpx;
+  color: #9aa5b1;
+}
+
+.fb-status {
+  font-size: 22rpx;
+  color: #b07b12;
+  background: #fdf3e1;
+  padding: 4rpx 16rpx;
+  border-radius: 18rpx;
+}
+
+.fb-status.done {
+  color: #0e7a45;
+  background: #eaf8f0;
+}
+
+.fb-content {
+  font-size: 27rpx;
+  color: #33404d;
+  line-height: 1.75;
+  word-break: break-all;
+}
+
+.fb-contact {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: #9aa5b1;
+}
+
+.fb-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+}
+
+.resolve-btn {
+  margin: 0;
+  padding: 0 28rpx;
+  height: 62rpx;
+  line-height: 62rpx;
+  font-size: 24rpx;
+  color: #0e7a45;
+  background: #eaf8f0;
+  border-radius: 31rpx;
+}
+
+.resolve-btn::after {
+  border: none;
+}
+
+.done-tip {
+  font-size: 23rpx;
+  color: #9fd9b9;
+}
+
+.foot {
+  margin-top: 24rpx;
+  font-size: 22rpx;
+  color: #b3bcc5;
+  text-align: center;
+  line-height: 1.7;
+}

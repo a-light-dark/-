@@ -1,0 +1,39 @@
+<!-- 社区规范 -->
+<view class="doc">
+  <view class="doc-title">社区规范</view>
+  <view class="doc-meta">更新日期：{{updated}}　适用范围：校园圈全部内容与互助</view>
+
+  <view class="doc-p">校园圈是同学们互相帮个忙、聊点校园事的地方。为了让这里对每个人都友好、安全，请遵守下面的约定。</view>
+
+  <view class="doc-h">一、鼓励这样发</view>
+  <view class="doc-p">· 校园里的真实见闻：食堂新菜、图书馆座位、社团招新、考试周经验；</view>
+  <view class="doc-p">· 真诚求助：找人搭学习局、代取快递、帮忙占座、失物招领；</view>
+  <view class="doc-p">· 友善的表达：提建议、分享经验、给同学打气。</view>
+
+  <view class="doc-h">二、禁止发布</view>
+  <view class="doc-p">1. 违反法律法规或公序良俗的内容：涉政敏感、色情低俗、赌博诈骗、暴力恐怖、邪教迷信；</view>
+  <view class="doc-p">2. 攻击性内容：人身攻击、地域或性别歧视、挂人曝光、恶意嘲讽；</view>
+  <view class="doc-p">3. 泄露隐私：他人的真实姓名、学号、手机号、宿舍号、照片、聊天记录；</view>
+  <view class="doc-p">4. 商业推广：微商广告、代写代考、刷单返利、校园贷、售卖违禁物品；</view>
+  <view class="doc-p">5. 不实信息：造谣、拼凑截图、冒充老师或学校部门；</view>
+  <view class="doc-p">6. 刷屏与灌水：无意义重复内容、诱导点赞、批量发布的广告。</view>
+
+  <view class="doc-h">三、互助悬赏的规矩</view>
+  <view class="doc-p">1. 金额写清楚，交付内容写清楚，别让对方猜；</view>
+  <view class="doc-p">2. 不接自己发布的单；接单后按时完成，完不成尽早说明；</view>
+  <view class="doc-p">3. 完成由接单人标记、发布人确认，双向确认后才算结束；</view>
+  <view class="doc-p">4. 涉及垫付资金、代收快递以外的贵重物品、需要提供身份证或校园卡照片的，请果断拒绝并举报；</view>
+  <view class="doc-p">5. 单笔悬赏金额建议不超过 100 元，金额异常大的请多留个心眼。</view>
+
+  <view class="doc-h">四、我们会怎么处理</view>
+  <view class="doc-p">1. 发布时自动检测：所有文字和图片会先经过微信官方内容安全接口，违规内容发不出去；</view>
+  <view class="doc-p">2. 举报告知：每条帖子详情页都有「举报」，运营方会看到举报并处理；</view>
+  <view class="doc-p">3. 处理方式：删除内容、提醒当事人、限制发布；情节严重的，会保留证据并配合学校或有关部门处理。</view>
+
+  <view class="doc-h">五、给新同学的三点提醒</view>
+  <view class="doc-p">· 别在公开帖子里留手机号、宿舍号、课表等能定位到你的信息；</view>
+  <view class="doc-p">· 线下见面选在人多的地方，贵重物品当面点清；</view>
+  <view class="doc-p">· 遇到让你「先转账」「扫码垫付」的，一律先举报。</view>
+
+  <view class="doc-foot">这条规范会随社区一起调整，欢迎通过「建议反馈」告诉我们你的想法。</view>
+</view>

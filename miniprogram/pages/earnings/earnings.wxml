@@ -1,0 +1,31 @@
+<!-- 我的收益 -->
+<view class="page">
+
+  <!-- 总收益卡 -->
+  <view class="total-card">
+    <view class="total-label">累计收益（已确认完成）</view>
+    <view class="total-value">¥{{total}}</view>
+    <view class="total-sub">共完成 {{count}} 单</view>
+  </view>
+
+  <!-- 明细 -->
+  <view class="list-title">收益明细</view>
+
+  <view class="row" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="goOrder">
+    <view class="row-info">
+      <view class="row-content">{{item.content}}</view>
+      <view class="row-meta">{{item.time}} · 来自 {{item.nickname}}</view>
+    </view>
+    <view class="row-amount">+¥{{item.amount}}</view>
+  </view>
+
+  <view wx:if="{{loading && list.length === 0}}" class="empty">加载中…</view>
+  <view wx:if="{{!loading && list.length === 0}}" class="empty">
+    <view>还没有收益</view>
+    <view class="empty-sub">去互助大厅接一单、对方确认完成，收益就记在这里啦</view>
+    <view class="go-btn" bindtap="goHelp">去互助大厅看看</view>
+  </view>
+
+  <view wx:if="{{offline}}" class="offline-tip">当前是本地演示数据</view>
+
+</view>

@@ -1,0 +1,58 @@
+<!-- 我的收藏 -->
+<view class="page">
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <view wx:if="{{!loading && list.length === 0}}" class="empty">
+    还没有收藏，去首页逛逛吧～
+  </view>
+
+  <block wx:for="{{list}}" wx:key="id">
+    <!-- 帖子被删了：保留一行，灰掉，点一下可移除收藏 -->
+    <view
+      wx:if="{{item.deleted}}"
+      class="fav card deleted"
+      data-id="{{item.id}}"
+      bindtap="onDeletedTap"
+    >
+      <view class="fav-head">
+        <view class="avatar">🗑️</view>
+        <view class="fav-nick">帖子已被删除</view>
+      </view>
+      <view class="fav-content">作者删除了这条帖子，你的收藏还留着。点一下可以移除这条记录。</view>
+      <view class="fav-foot">
+        <view class="fav-tags"></view>
+        <view class="fav-counts">
+          <text class="count">点一下移除</text>
+        </view>
+      </view>
+    </view>
+
+    <view
+      wx:else
+      class="fav card"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="fav-head">
+        <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+        <view wx:else class="avatar">{{item.avatar}}</view>
+        <view class="fav-nick">{{item.nickname}}</view>
+        <view class="fav-time">{{item.time}}</view>
+      </view>
+
+      <view class="fav-content">{{item.content}}</view>
+
+      <view class="fav-foot">
+        <view class="fav-tags">
+          <view class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this"># {{tag}}</view>
+        </view>
+        <view class="fav-counts">
+          <text class="count">👍 {{item.likeCount}}</text>
+          <text class="count">💬 {{item.commentCount}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+</view>

@@ -1,0 +1,144 @@
+/* pages/feedback/feedback.wxss —— 建议反馈 */
+.page {
+  min-height: 100vh;
+  background: #f6f6f6;
+  padding: 24rpx 24rpx 60rpx;
+  box-sizing: border-box;
+}
+
+.intro-card {
+  background: #eefaf2;
+  border-radius: 20rpx;
+  padding: 26rpx 28rpx;
+}
+
+.intro-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #0e7a45;
+  margin-bottom: 10rpx;
+}
+
+.intro-line {
+  font-size: 25rpx;
+  color: #4c6b5b;
+  line-height: 1.75;
+}
+
+.form-card {
+  margin-top: 24rpx;
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 24rpx 26rpx 28rpx;
+}
+
+.feedback-input {
+  width: 100%;
+  height: 260rpx;
+  font-size: 27rpx;
+  color: #33404d;
+  line-height: 1.7;
+  box-sizing: border-box;
+}
+
+.ph {
+  color: #b3bcc5;
+}
+
+.counter {
+  text-align: right;
+  font-size: 22rpx;
+  color: #b3bcc5;
+  margin-top: 6rpx;
+}
+
+.contact-input {
+  margin-top: 16rpx;
+  padding: 20rpx 22rpx;
+  background: #f7f8fa;
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  color: #33404d;
+}
+
+.submit-btn {
+  margin-top: 26rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 44rpx;
+  background: #07c160;
+  color: #ffffff;
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.submit-btn[disabled] {
+  background: #9fd9b9;
+}
+
+.section-title {
+  margin: 36rpx 8rpx 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #33404d;
+}
+
+.empty {
+  padding: 40rpx 0;
+  text-align: center;
+  color: #9aa5b1;
+  font-size: 25rpx;
+}
+
+.fb-card {
+  background: #ffffff;
+  border-radius: 18rpx;
+  padding: 24rpx 26rpx;
+  margin-bottom: 18rpx;
+}
+
+.fb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.fb-time {
+  font-size: 23rpx;
+  color: #9aa5b1;
+}
+
+.fb-status {
+  font-size: 22rpx;
+  color: #b07b12;
+  background: #fdf3e1;
+  padding: 4rpx 16rpx;
+  border-radius: 18rpx;
+}
+
+.fb-status.done {
+  color: #0e7a45;
+  background: #eaf8f0;
+}
+
+.fb-content {
+  font-size: 27rpx;
+  color: #33404d;
+  line-height: 1.75;
+  word-break: break-all;
+}
+
+.fb-contact {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: #9aa5b1;
+}
+
+.foot {
+  margin-top: 20rpx;
+  font-size: 22rpx;
+  color: #b3bcc5;
+  text-align: center;
+  line-height: 1.7;
+}

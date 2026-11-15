@@ -1,0 +1,100 @@
+<!-- 互助大厅 -->
+<view class="page">
+
+  <!-- 顶部说明 -->
+  <view class="hall-head">
+    <view class="hall-title">互助大厅</view>
+    <view class="hall-desc">发布悬赏，请同学帮忙跑腿、代取、代办～</view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-row">
+    <view class="action-btn ghost" bindtap="goMyOrders">📋 我的接单</view>
+    <view class="action-btn primary" bindtap="goPublish">✏️ 发布需求</view>
+  </view>
+
+  <!-- 订单分类 tab -->
+  <view class="tabs">
+    <view
+      class="tab {{currentTab === index ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="*this"
+      data-index="{{index}}"
+      bindtap="onTabTap"
+    >{{item}}</view>
+  </view>
+
+  <!-- 订单列表 -->
+  <view
+    class="order"
+    wx:for="{{orders}}"
+    wx:key="id"
+    data-id="{{item.id}}"
+    bindtap="goDetail"
+  >
+    <view class="order-head">
+      <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar">{{item.avatar}}</view>
+      <view class="head-info">
+        <view class="nickname">{{item.nickname}}</view>
+        <view class="time">{{item.time}} 创建</view>
+      </view>
+      <view class="status {{item.statusClass}}">{{item.status}}</view>
+    </view>
+
+    <view class="order-content">{{item.content}}</view>
+
+    <view class="order-foot">
+      <view class="amount">订单金额 ¥{{item.amount}}</view>
+
+      <!-- 待接单：显示抢单按钮（确认框在 help.js 里） -->
+      <view
+        wx:if="{{item.status === '待接单'}}"
+        class="grab-btn"
+        data-id="{{item.id}}"
+        catchtap="grab"
+      >立即抢单</view>
+
+      <!-- 我接的单、还没完成：显示标记完成 -->
+      <view
+        wx:elif="{{item.takenByMe && item.status === '已接单'}}"
+        class="grab-btn"
+        data-id="{{item.id}}"
+        catchtap="done"
+      >标记完成</view>
+
+      <!-- 我接的单、待发布人确认 -->
+      <view
+        wx:elif="{{item.takenByMe && item.status === '待确认'}}"
+        class="grab-btn wait"
+        data-id="{{item.id}}"
+        catchtap="goDetail"
+      >待发布人确认</view>
+
+      <!-- 我发的、待我确认 -->
+      <view
+        wx:elif="{{item.mine && item.status === '待确认'}}"
+        class="grab-btn confirm"
+        data-id="{{item.id}}"
+        catchtap="goDetail"
+      >待我确认</view>
+
+      <!-- 我发的、还没人接：可撤销（详情页里操作） -->
+      <view
+        wx:elif="{{item.mine && item.status === '待接单'}}"
+        class="grab-btn cancel"
+        data-id="{{item.id}}"
+        catchtap="goDetail"
+      >没人接 · 点开详情可撤销</view>
+    </view>
+
+    <!-- 接单人提示 -->
+    <view wx:if="{{item.status !== '待接单' && item.status !== '已撤销' && item.takerName}}" class="order-taker">
+      🙋 接单人：{{item.takerName}}
+    </view>
+  </view>
+
+  <!-- 加载 / 空状态 -->
+  <view wx:if="{{loading && orders.length === 0}}" class="empty">加载中…</view>
+  <view wx:if="{{!loading && orders.length === 0}}" class="empty">暂无订单</view>
+</view>

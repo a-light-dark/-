@@ -1,0 +1,63 @@
+<!-- pages/topic/topic.wxml —— 话题页 -->
+<view class="wrap">
+
+  <!-- 话题头 -->
+  <view class="topic-head">
+    <view class="topic-emoji">{{meta.emoji}}</view>
+    <view class="topic-info">
+      <view class="topic-name"># {{meta.name}}</view>
+      <view class="topic-desc">{{meta.desc}}</view>
+      <view class="topic-count">{{posts.length}} 条帖子</view>
+    </view>
+    <view class="topic-actions">
+      <button class="topic-join" bindtap="goPublish">参与话题</button>
+      <button class="topic-follow {{following ? 'on' : ''}}" bindtap="onFollowTap">{{following ? '已关注' : '+ 关注'}}</button>
+    </view>
+  </view>
+
+  <view wx:if="{{offline}}" class="offline-tip">当前是本地演示数据（云开发没连上）</view>
+
+  <!-- 帖子列表 -->
+  <view class="post" wx:for="{{posts}}" wx:key="id" data-id="{{item.id}}" bindtap="goDetail">
+    <view class="post-head">
+      <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar">{{item.avatar}}</view>
+      <view class="post-user">
+        <view class="nickname">{{item.nickname}}</view>
+        <view class="time">{{item.time}}</view>
+      </view>
+    </view>
+
+    <view class="content">{{item.content}}</view>
+
+    <view class="post-images" wx:if="{{item.images && item.images.length}}">
+      <image
+        class="post-image"
+        wx:for="{{item.images}}"
+        wx:for-item="pic"
+        wx:key="*this"
+        src="{{pic}}"
+        mode="aspectFill"
+        data-id="{{item.id}}"
+        data-src="{{pic}}"
+        catchtap="previewPostImage"
+      />
+    </view>
+
+    <view class="post-foot">
+      <view class="tag-list">
+        <view class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this"># {{tag}}</view>
+      </view>
+      <view class="stats">
+        <text>👍 {{item.likeCount}}</text>
+        <text>💬 {{item.commentCount}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="hint">加载中…</view>
+  <view wx:if="{{!loading && posts.length === 0}}" class="empty">
+    这个话题还没有帖子，点上面的「参与话题」发第一条吧
+  </view>
+
+</view>

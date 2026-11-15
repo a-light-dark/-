@@ -1,0 +1,62 @@
+<!-- 举报处理（管理员） -->
+<view class="page">
+
+  <!-- 不是管理员 -->
+  <view class="state" wx:if="{{checked && !isAdmin}}">
+    <view class="state-icon">🔒</view>
+    <view class="state-title">这个页面只有圈主能看</view>
+    <view class="state-desc">如果你就是圈主，请确认小程序是用你自己的微信打开的</view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="state" wx:elif="{{loading}}">
+    <view class="state-desc">正在读取举报…</view>
+  </view>
+
+  <!-- 没有举报 -->
+  <block wx:elif="{{reports.length === 0}}">
+    <view class="tip">暂无待处理的举报，社区很干净 👍</view>
+  </block>
+
+  <!-- 举报列表 -->
+  <block wx:else>
+    <view class="tip">共 {{reports.length}} 条待处理</view>
+
+    <view class="report-card" wx:for="{{reports}}" wx:key="id">
+      <view class="report-head">
+        <view class="reason">{{item.reason}}</view>
+        <view class="report-time">{{item.time}}</view>
+      </view>
+
+      <!-- 被举报的帖子 -->
+      <view class="post" wx:if="{{item.post}}" bindtap="goDetail" data-postid="{{item.postId}}">
+        <view class="post-user">
+          <image wx:if="{{item.post.avatarIsImage}}" class="avatar" src="{{item.post.avatar}}" mode="aspectFill" />
+          <view wx:else class="avatar">{{item.post.avatar}}</view>
+          <view class="post-name">{{item.post.nickname}}</view>
+          <view class="post-time">{{item.post.time}}</view>
+        </view>
+        <view class="post-content">{{item.post.content}}</view>
+        <view class="post-images" wx:if="{{item.post.images.length}}">
+          <image
+            wx:for="{{item.post.images}}"
+            wx:for-item="pic"
+            wx:key="*this"
+            class="post-image"
+            src="{{pic}}"
+            mode="aspectFill"
+          />
+        </view>
+      </view>
+
+      <!-- 帖子已经被作者删了 -->
+      <view class="post gone" wx:else>这条帖子已经被删除了</view>
+
+      <view class="report-actions">
+        <view class="btn ghost" bindtap="onDismiss" data-id="{{item.id}}">忽略</view>
+        <view class="btn danger" wx:if="{{item.post}}" bindtap="onDeleteReport" data-id="{{item.id}}" data-postid="{{item.postId}}">删除帖子</view>
+      </view>
+    </view>
+  </block>
+
+</view>

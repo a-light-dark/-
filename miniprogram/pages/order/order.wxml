@@ -1,0 +1,80 @@
+<!-- 订单详情 -->
+<view class="page" wx:if="{{!loading && order}}">
+
+  <!-- 状态横幅 -->
+  <view class="hero {{statusClass}}">
+    <view class="hero-status">{{order.status}}</view>
+    <view class="hero-amount">¥{{order.amount}}</view>
+  </view>
+
+  <!-- 双方信息 -->
+  <view class="card">
+    <view class="side">
+      <image wx:if="{{ownerAvatarIsImage}}" class="avatar" src="{{order.ownerAvatar}}" mode="aspectFill" />
+      <view wx:else class="avatar">{{order.ownerAvatar}}</view>
+      <view class="side-info">
+        <view class="side-name">{{order.ownerNickname}}</view>
+        <view class="side-tag">发布人</view>
+      </view>
+    </view>
+
+    <view class="divider"></view>
+
+    <view class="side" wx:if="{{order.takerNickname}}">
+      <image wx:if="{{takerAvatarIsImage}}" class="avatar" src="{{order.takerAvatar}}" mode="aspectFill" />
+      <view wx:else class="avatar">{{order.takerAvatar}}</view>
+      <view class="side-info">
+        <view class="side-name">{{order.takerNickname}}</view>
+        <view class="side-tag">接单人</view>
+      </view>
+    </view>
+    <view class="side" wx:else>
+      <view class="avatar dim">❓</view>
+      <view class="side-info">
+        <view class="side-name dim">还没有人接单</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 悬赏内容 -->
+  <view class="card">
+    <view class="card-title">悬赏内容</view>
+    <view class="content">{{order.content}}</view>
+    <view class="meta">发布于 {{order.time}}</view>
+  </view>
+
+  <!-- 流程说明 -->
+  <view class="card steps">
+    <view class="card-title">订单流程</view>
+    <view class="step {{order.status === '待接单' || order.status === '已接单' || order.status === '待确认' || order.status === '已完成' ? 'on' : ''}}">1. 有人接单</view>
+    <view class="step {{order.status === '已接单' || order.status === '待确认' || order.status === '已完成' ? 'on' : ''}}">2. 接单人标记完成</view>
+    <view class="step {{order.status === '待确认' || order.status === '已完成' ? 'on' : ''}}">3. 发布人确认完成</view>
+    <view class="step {{order.status === '已完成' ? 'on' : ''}}">4. 完成 ✅ 收益到账</view>
+  </view>
+
+  <!-- 订单评价（双方确认完成后） -->
+  <view class="card" wx:if="{{order.status === '已完成'}}">
+    <view class="card-title">订单评价</view>
+    <view wx:if="{{myReview}}" class="review-line">我的评价：{{myReview.score}} 星 · {{myReview.text || '（没写文字）'}}</view>
+    <view wx:if="{{theirReview}}" class="review-line">对方的评价：{{theirReview.score}} 星 · {{theirReview.text || '（没写文字）'}}</view>
+    <view wx:if="{{!myReview && (order.mine || order.takenByMe)}}" class="btn primary" bindtap="goReview">⭐ 评价对方</view>
+    <view wx:if="{{myReview && !theirReview}}" class="tip">你已经评过了，等对方也评一下就都完成了。</view>
+  </view>
+
+  <!-- 操作区 -->
+  <view class="actions">
+    <view wx:if="{{canGrab}}" class="btn primary" bindtap="onGrab">🙋 确认接单</view>
+    <view wx:if="{{canDone}}" class="btn primary" bindtap="onDone">✅ 我完成了，标记一下</view>
+    <view wx:if="{{canConfirm}}" class="btn primary" bindtap="onConfirm">👍 确认完成</view>
+    <view wx:if="{{canRelease}}" class="btn ghost" bindtap="onRelease">↩️ 取消接单</view>
+    <view wx:if="{{canCancel}}" class="btn danger" bindtap="onCancel">🗑 撤销这条悬赏</view>
+    <view wx:if="{{order.status === '待确认' && !order.mine}}" class="tip">已标记完成，等发布人确认后收益到账。</view>
+    <view wx:if="{{order.status === '已完成' && order.takenByMe}}" class="tip">🎉 已完成，这笔收益可以在「我的 → 我的收益」里看到。</view>
+    <view wx:if="{{order.status === '已撤销'}}" class="tip">这条悬赏已撤销。</view>
+    <view class="btn ghost back" bindtap="goHelp">← 回到互助大厅</view>
+  </view>
+
+</view>
+
+<view wx:if="{{loading}}" class="empty">加载中…</view>
+<view wx:if="{{!loading && !order}}" class="empty">订单不存在或已删除</view>
