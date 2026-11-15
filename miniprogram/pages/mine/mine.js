@@ -10,6 +10,7 @@ const BASE_MENUS = [
   '客服中心', '建议反馈',
   '用户协议', '隐私政策',
   '社区规范', '注销账号',
+  '使用说明',
 ]
 
 Page({
@@ -109,6 +110,14 @@ Page({
     }
     if (name === '注销账号') {
       wx.navigateTo({ url: '/pages/account/account' })
+      return
+    }
+    if (name === '使用说明') {
+      wx.navigateTo({ url: '/pages/guide/guide' })
+      return
+    }
+    if (name === '客服中心') {
+      wx.navigateTo({ url: '/pages/support/support' })
       return
     }
     if (name === '建议反馈') {

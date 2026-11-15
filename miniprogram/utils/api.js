@@ -182,10 +182,12 @@ function normalizePost(doc) {
     images: doc.images || [],
     likeCount: doc.likeCount || 0,
     commentCount: doc.commentCount || 0,
+    views: doc.views || 0,
     createdAt: doc.createdAt,
     time: format.relativeTime(doc.createdAt),
     mine: doc._openid === myOpenid(),
     authorOpenid: doc._openid || '',
+    anonymous: doc.anonymous === true || doc.nickname === '匿名同学',
   }
 }
 
@@ -200,10 +202,12 @@ function normalizeLocalPost(p) {
     images: p.images || [],
     likeCount: p.likeCount || 0,
     commentCount: p.commentCount || 0,
+    views: p.views || 0,
     createdAt: null,
     time: p.time || '刚刚',
     mine: p.mine === true || p.nickname === '我',
     authorOpenid: '',
+    anonymous: p.anonymous === true || p.nickname === '匿名同学',
   }
 }
 
@@ -215,6 +219,9 @@ function normalizeComment(doc) {
     avatar: doc.avatar || '😀',
     avatarIsImage: isImagePath(doc.avatar),
     content: doc.content || '',
+    parentId: doc.parentId || '',
+    replyTo: doc.replyTo || '',
+    mine: doc._openid === myOpenid(),
     createdAt: doc.createdAt,
     time: format.relativeTime(doc.createdAt),
   }
@@ -228,6 +235,9 @@ function normalizeLocalComment(c) {
     avatar: c.avatar || '😀',
     avatarIsImage: isImagePath(c.avatar),
     content: c.content || '',
+    parentId: c.parentId ? String(c.parentId) : '',
+    replyTo: c.replyTo || '',
+    mine: c.mine === true,
     createdAt: null,
     time: c.time || '刚刚',
   }
@@ -285,31 +295,42 @@ function fetchPosts(options) {
   const page = opts.page || 0
   const pageSize = opts.pageSize || 10
   const tag = opts.tag || ''
+  // 排序：new 最新 / hot 最热（点赞）/ views 最多浏览
+  const sort = opts.sort || 'new'
+  const sortKey = sort === 'hot' ? 'likeCount' : sort === 'views' ? 'views' : 'createdAt'
 
   return run(function () {
     const coll = db().collection('posts')
     // 按板块筛选：先查出来再按时间排（避免 where + orderBy 要求复合索引）
     if (tag) {
-      return coll.where({ tags: tag }).limit(50).get().then(function (res) {
+      return coll.where({ tags: tag }).limit(100).get().then(function (res) {
         const list = (res.data || []).map(normalizePost)
         list.sort(function (a, b) {
-          return toTs(b.createdAt) - toTs(a.createdAt)
+          return sort === 'new'
+            ? toTs(b.createdAt) - toTs(a.createdAt)
+            : (b[sortKey] || 0) - (a[sortKey] || 0)
         })
         return resolveImages(list).then(function (l) {
           return { list: l, hasMore: false, offline: false }
         })
       })
     }
-    return coll.orderBy('createdAt', 'desc').skip(page * pageSize).limit(pageSize).get().then(function (res) {
+    return coll.orderBy(sortKey, 'desc').skip(page * pageSize).limit(pageSize).get().then(function (res) {
       const list = (res.data || []).map(normalizePost)
       return resolveImages(list).then(function (l) {
         return { list: l, hasMore: l.length === pageSize, offline: false }
       })
     })
   }, function () {
-    const all = tag
+    let all = tag
       ? mock.POSTS.filter(function (p) { return (p.tags || []).indexOf(tag) > -1 })
       : mock.POSTS.slice()
+    all = all.slice()
+    if (sort === 'hot') {
+      all.sort(function (a, b) { return (b.likeCount || 0) - (a.likeCount || 0) })
+    } else if (sort === 'views') {
+      all.sort(function (a, b) { return (b.views || 0) - (a.views || 0) })
+    }
     return { list: all.map(normalizeLocalPost), hasMore: false, offline: true }
   })
 }
@@ -370,6 +391,36 @@ function topicMeta(name) {
     if (TOPIC_LIST[i].name === name) return TOPIC_LIST[i]
   }
   return { name: name, emoji: '#', desc: '这个话题下的帖子' }
+}
+
+// 热门话题：统计最近 200 条帖子的标签，按出现次数排。首页顶部「运营位」用。
+function fetchHotTopics(limit) {
+  const n = limit || 6
+  function countFrom(posts) {
+    const map = {}
+    posts.forEach(function (p) {
+      const tags = p.tags || []
+      tags.forEach(function (t) {
+        const name = String(t || '').trim()
+        if (!name) return
+        map[name] = (map[name] || 0) + 1
+      })
+    })
+    return Object.keys(map)
+      .map(function (name) {
+        const meta = topicMeta(name)
+        return { tag: name, emoji: meta.emoji, desc: meta.desc, count: map[name] }
+      })
+      .sort(function (a, b) { return b.count - a.count })
+      .slice(0, n)
+  }
+  return run(function () {
+    return db().collection('posts').orderBy('createdAt', 'desc').limit(200).get().then(function (res) {
+      return countFrom(res.data || [])
+    })
+  }, function () {
+    return countFrom(mock.POSTS)
+  })
 }
 
 // 本周热榜 Top N：最近 7 天发的帖子里，按点赞数排。
@@ -547,8 +598,39 @@ function createPost(input) {
       commentCount: 0,
       time: '刚刚',
       mine: true,
+      anonymous: !!anonymous,
     })
     return { offline: true }
+  })
+}
+
+// 编辑自己的帖子：只能改正文和话题，图片保持不变
+// 走云函数是因为帖子集合对客户端只读，而且改后的文字也要过内容安全
+function updatePost(postId, input) {
+  const id = String(postId || '')
+  const content = String((input && input.content) || '').trim()
+  const tags = ((input && input.tags) || []).slice(0, 3)
+
+  if (!id) return Promise.reject(new Error('缺少帖子 id'))
+  if (!content) return Promise.reject(new Error('内容不能为空'))
+
+  return run(function () {
+    return wx.cloud.callFunction({
+      name: 'updatePost',
+      data: { postId: id, content: content, tags: tags },
+    }).then(function (res) {
+      const result = res.result || {}
+      if (!result.ok) throw new Error(result.msg || '保存失败')
+      return { ok: true, offline: false }
+    })
+  }, function () {
+    const post = mock.POSTS.filter(function (p) { return String(p.id) === id })[0]
+    if (post) {
+      post.content = content
+      post.tags = tags
+      post.time = '刚刚'
+    }
+    return { ok: true, offline: true }
   })
 }
 
@@ -834,15 +916,31 @@ function normalizeNotice(row) {
   }
 }
 
-// 我的通知列表
-function fetchNotices() {
+// 我的通知列表；type 传 comment / like / order 就只看那一类
+function fetchNotices(type) {
+  const t = type && type !== 'all' ? String(type) : ''
   return run(function () {
-    return wx.cloud.callFunction({ name: 'notices', data: { action: 'list' } }).then(function (res) {
+    return wx.cloud.callFunction({ name: 'notices', data: { action: 'list', type: t } }).then(function (res) {
       const result = res.result || {}
       return (result.list || []).map(normalizeNotice)
     })
   }, function () {
     return []
+  })
+}
+
+// 消息页首屏：一次云调用拿「列表 + 未读数」（notices 的 bundle 动作）
+function fetchMessageCenter() {
+  return run(function () {
+    return wx.cloud.callFunction({ name: 'notices', data: { action: 'bundle' } }).then(function (res) {
+      const result = res.result || {}
+      return {
+        list: (result.list || []).map(normalizeNotice),
+        unread: result.unread || 0,
+      }
+    })
+  }, function () {
+    return { list: [], unread: 0 }
   })
 }
 
@@ -896,40 +994,99 @@ function refreshBadge() {
   })
 }
 
+/* 浏览量：同一条帖子 5 分钟内重复打开只算一次，避免刷数 */
+const viewedAt = {}
+
+function incView(postId) {
+  const id = String(postId || '')
+  if (!id) return Promise.resolve(null)
+  const last = viewedAt[id] || 0
+  if (Date.now() - last < 5 * 60 * 1000) return Promise.resolve(null)
+  viewedAt[id] = Date.now()
+  return run(function () {
+    return wx.cloud.callFunction({ name: 'viewPost', data: { postId: id } }).then(function (res) {
+      const r = res.result || {}
+      return r.ok ? r.views : null
+    })
+  }, function () {
+    const p = mock.POSTS.filter(function (x) { return String(x.id) === id })[0]
+    if (p) p.views = (p.views || 0) + 1
+    return p ? p.views || 1 : null
+  })
+}
+
 /* ================= 评论 ================= */
 
 function fetchComments(postId) {
   const id = String(postId || '')
   return run(function () {
-    return db().collection('comments').where({ postId: id }).limit(50).get().then(function (res) {
+    return db().collection('comments').where({ postId: id }).limit(100).get().then(function (res) {
       const list = (res.data || []).map(normalizeComment)
-      list.sort(function (a, b) {
-        return toTs(b.createdAt) - toTs(a.createdAt)
-      })
-      return list
+      return buildCommentTree(list)
     })
   }, function () {
-    return mock.COMMENTS
+    return buildCommentTree(mock.COMMENTS
       .filter(function (c) { return String(c.postId) === id })
-      .map(normalizeLocalComment)
+      .map(normalizeLocalComment))
   })
 }
 
-function addComment(postId, content) {
+// 把扁平的评论列表整理成「顶层评论 + replies」两层结构
+function buildCommentTree(list) {
+  const byId = {}
+  const tops = []
+  list.forEach(function (c) { byId[String(c.id)] = c })
+  list.forEach(function (c) {
+    if (!c.parentId) { tops.push(c); return }
+    let parent = byId[String(c.parentId)]
+    if (parent && parent.parentId) parent = byId[String(parent.parentId)] || parent
+    if (!parent) { tops.push(c); return }
+    if (String(parent.id) === String(c.id)) { tops.push(c); return }
+    if (!parent.replies) parent.replies = []
+    parent.replies.push(c)
+  })
+  tops.forEach(function (c) {
+    c.replies = c.replies || []
+    c.replies.sort(function (a, b) { return toTs(a.createdAt) - toTs(b.createdAt) })
+  })
+  tops.sort(function (a, b) {
+    const ta = toTs(a.createdAt) || (a.time === '刚刚' ? Date.now() : 0)
+    const tb = toTs(b.createdAt) || (b.time === '刚刚' ? Date.now() : 0)
+    return tb - ta
+  })
+  return tops
+}
+
+function addComment(postId, content, parentId, replyTo) {
   const id = String(postId || '')
   const text = String(content || '').trim()
   const profile = myProfile()
+  const pid = String(parentId || '')
+  const toNick = String(replyTo || '')
   if (!text) return Promise.reject(new Error('评论不能为空'))
 
   return run(function () {
     return wx.cloud.callFunction({
       name: 'addComment',
-      data: { postId: id, content: text, nickname: profile.nickname, avatar: profile.avatar },
+      data: { postId: id, content: text, nickname: profile.nickname, avatar: profile.avatar, parentId: pid, replyTo: toNick },
     }).then(function (res) {
       const result = res.result || {}
       if (!result.ok) throw new Error(result.msg || '评论失败')
       return {
-        comment: { id: result.id, nickname: profile.nickname, avatar: profile.avatar, content: text, time: '刚刚' },
+        comment: {
+          id: result.id,
+          postId: id,
+          nickname: result.nickname || profile.nickname,
+          avatar: result.avatar || profile.avatar,
+          avatarIsImage: isImagePath(result.avatar || profile.avatar),
+          content: text,
+          parentId: result.parentId || pid,
+          replyTo: result.replyTo || toNick,
+          mine: true,
+          createdAt: new Date(),
+          time: '刚刚',
+          replies: [],
+        },
         offline: false,
       }
     })
@@ -940,6 +1097,8 @@ function addComment(postId, content) {
       nickname: profile.nickname,
       avatar: profile.avatar,
       content: text,
+      parentId: pid,
+      replyTo: toNick,
       time: '刚刚',
     }
     mock.COMMENTS.unshift(comment)
@@ -947,8 +1106,51 @@ function addComment(postId, content) {
   })
 }
 
-/* ================= 互助订单 ================= */
+// 删除自己的评论；删顶层评论时，它下面的回复一起删
+function deleteComment(commentId) {
+  const cid = String(commentId || '')
+  if (!cid) return Promise.reject(new Error('缺少评论 id'))
+  return run(function () {
+    return wx.cloud.callFunction({
+      name: 'deleteComment',
+      data: { commentId: cid },
+    }).then(function (res) {
+      const result = res.result || {}
+      if (!result.ok) throw new Error(result.msg || '删除失败')
+      return { ok: true, removed: result.removed || 1 }
+    })
+  }, function () {
+    const idx = mock.COMMENTS.findIndex(function (c) { return String(c.id) === cid })
+    if (idx > -1) mock.COMMENTS.splice(idx, 1)
+    mock.COMMENTS.slice().forEach(function (c) {
+      if (String(c.parentId) === cid) {
+        const i = mock.COMMENTS.findIndex(function (x) { return x === c })
+        if (i > -1) mock.COMMENTS.splice(i, 1)
+      }
+    })
+    return { ok: true, removed: 1, offline: true }
+  })
+}
 
+// 删除一条站内通知（只删自己的）
+function deleteNotice(noticeId) {
+  const nid = String(noticeId || '')
+  if (!nid) return Promise.reject(new Error('缺少通知 id'))
+  return run(function () {
+    return wx.cloud.callFunction({
+      name: 'notices',
+      data: { action: 'remove', noticeId: nid },
+    }).then(function (res) {
+      const result = res.result || {}
+      if (!result.ok) throw new Error(result.msg || '删除失败')
+      return { ok: true, offline: false }
+    })
+  }, function () {
+    return { ok: true, offline: true }
+  })
+}
+
+/* ================= 互助订单 ================= */
 function fetchOrders(key) {
   const tab = key || 'all'
   const openid = myOpenid()
@@ -1322,6 +1524,10 @@ function fetchUserProfile(openid) {
       const docs = arr[0].data || []
       const u = (arr[1].data || [])[0] || {}
       const review = arr[2] || {}
+      // 查无此人：没有用户档案、也没发过帖子 → 返回 null，页面显示「没有找到这位同学」
+      if (!u._id && docs.length === 0) {
+        return { profile: null, posts: [], stats: { postCount: 0, likeCount: 0 }, offline: false }
+      }
       const posts = docs.map(normalizePost)
       let likeSum = 0
       posts.forEach(function (p) { likeSum += p.likeCount || 0 })
@@ -1396,7 +1602,9 @@ module.exports = {
   saveProfile: saveProfile,
   fetchPosts: fetchPosts,
   fetchHotPost: fetchHotPost,
+  incView: incView,
   fetchWeeklyHot: fetchWeeklyHot,
+  fetchHotTopics: fetchHotTopics,
   fetchActiveUsers: fetchActiveUsers,
   TOPIC_LIST: TOPIC_LIST,
   topicMeta: topicMeta,
@@ -1406,6 +1614,9 @@ module.exports = {
   toggleLike: toggleLike,
   fetchComments: fetchComments,
   addComment: addComment,
+  deleteComment: deleteComment,
+  deleteNotice: deleteNotice,
+  updatePost: updatePost,
   fetchOrders: fetchOrders,
   createOrder: createOrder,
   fetchOrder: fetchOrder,
@@ -1437,6 +1648,7 @@ module.exports = {
   reportPost: reportPost,
   REPORT_REASONS: REPORT_REASONS,
   fetchNotices: fetchNotices,
+  fetchMessageCenter: fetchMessageCenter,
   fetchUnreadCount: fetchUnreadCount,
   markAllNoticesRead: markAllNoticesRead,
   markNoticeRead: markNoticeRead,

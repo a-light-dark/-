@@ -6,6 +6,41 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 订阅消息模板 ID：和 miniprogram/utils/subscribe.js 里的保持一致
+// 在 mp.weixin.qq.com → 功能 → 订阅消息 里选模板后把 ID 填进来；留空就跳过推送
+const TEMPLATE_IDS = {
+  comment: '',
+  like: '',
+  order: '',
+}
+// 推送打开的小程序版本：开发版 developer / 体验版 trial / 正式版 formal
+const MINIPROGRAM_STATE = 'developer'
+
+function nowText() {
+  const d = new Date(Date.now() + 8 * 3600 * 1000) // 云函数是 UTC，转成北京时间
+  const pad = function (n) { return n < 10 ? '0' + n : '' + n }
+  return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) +
+    ' ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes())
+}
+
+// 发订阅消息（用户得先在小程序里授权过；没配模板、没授权都只是跳过）
+async function subscribeNotify(toOpenid, kind, page, data) {
+  const templateId = TEMPLATE_IDS[kind]
+  if (!templateId || !toOpenid) return
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: toOpenid,
+      templateId: templateId,
+      page: page,
+      lang: 'zh_CN',
+      miniprogramState: MINIPROGRAM_STATE,
+      data: data,
+    })
+  } catch (err) {
+    console.warn('订阅消息发送失败（不影响主流程）', kind, err && err.errCode, err && err.errMsg)
+  }
+}
+
 async function checkText(content, scene, openid) {
   try {
     const res = await cloud.openapi.security.msgSecCheck({
@@ -29,6 +64,20 @@ exports.main = async (event) => {
   if (!postId || !content) return { ok: false, msg: '参数不完整' }
   if (content.length > 300) return { ok: false, msg: '评论太长啦，300 字以内' }
 
+  // 楼中楼：parentId 是「根评论」的 id（一层回复，不再往下嵌套）
+  let rootId = ''
+  let replyTo = ''
+  const rawParentId = String(event.parentId || '')
+  if (rawParentId) {
+    const parentDoc = await db.collection('comments').doc(rawParentId).get().catch(function () { return null })
+    const parent = parentDoc && parentDoc.data
+    if (!parent) return { ok: false, msg: '这条评论不存在了' }
+    if (String(parent.postId) !== postId) return { ok: false, msg: '评论和帖子对不上' }
+    // 回复「回复」时，挂到同一个根评论下，并把被回复的人记下来
+    rootId = parent.parentId ? String(parent.parentId) : String(parent._id || rawParentId)
+    replyTo = String(event.replyTo || parent.nickname || '').slice(0, 20)
+  }
+
   // 昵称头像优先用 users 里的最新资料，客户端传的只当兜底
   let nickname = event.nickname || '同学'
   let avatar = event.avatar || '😀'
@@ -45,9 +94,19 @@ exports.main = async (event) => {
   const check = await checkText(content, 2, OPENID) // scene 2 = 评论
   if (!check.ok) return { ok: false, msg: '评论可能不太合适，换个说法再试试', suggest: check.suggest }
 
-  // 先看帖子作者是谁：评论成功要给他发一条消息通知
+  // 先看帖子作者 / 被回复的人是谁：评论成功要给他发一条消息通知
   const postDoc = await db.collection('posts').doc(postId).get().catch(function () { return null })
   const postOwner = postDoc && postDoc.data && postDoc.data._openid
+  let replyOwner = ''
+  let replyOwnerNick = ''
+  if (rootId) {
+    const rootDoc = await db.collection('comments').doc(rootId).get().catch(function () { return null })
+    const root = rootDoc && rootDoc.data
+    if (root) {
+      replyOwner = root._openid || ''
+      replyOwnerNick = root.nickname || ''
+    }
+  }
 
   const res = await db.collection('comments').add({
     data: {
@@ -55,6 +114,8 @@ exports.main = async (event) => {
       content,
       nickname,
       avatar,
+      parentId: rootId,
+      replyTo: replyTo,
       createdAt: db.serverDate(),
       // 云函数写入不会自动带 _openid，手动补上，方便以后按作者查
       _openid: OPENID,
@@ -63,17 +124,22 @@ exports.main = async (event) => {
 
   await db.collection('posts').doc(postId).update({ data: { commentCount: _.inc(1) } })
 
-  // 通知帖子作者（不通知自己）
-  if (postOwner && postOwner !== OPENID) {
+  // 通知被回复的人（楼中楼）或帖子作者（顶层评论）；不通知自己
+  const targetOpenid = replyOwner || (rootId ? '' : postOwner)
+  if (targetOpenid && targetOpenid !== OPENID) {
+    const noticeText = replyOwner
+      ? '回复了你的评论：' + content.slice(0, 40)
+      : '评论了你的帖子：' + content.slice(0, 40)
     try {
       await db.collection('notices').add({
         data: {
-          toOpenid: postOwner,
+          toOpenid: targetOpenid,
           type: 'comment',
           postId: postId,
+          commentId: rootId,
           fromNickname: nickname,
           fromAvatar: avatar,
-          text: '评论了你的帖子：' + content.slice(0, 40),
+          text: noticeText,
           read: false,
           createdAt: db.serverDate(),
         },
@@ -81,7 +147,14 @@ exports.main = async (event) => {
     } catch (err) {
       console.warn('写评论通知失败（不影响评论）', err && err.errMsg)
     }
+
+    // 顺带发一条订阅消息（用户在消息页授权过才会收到）
+    await subscribeNotify(targetOpenid, 'comment', 'pages/detail/detail?id=' + postId, {
+      thing1: { value: content.slice(0, 20) },
+      thing2: { value: replyOwner ? nickname + ' 回复了 ' + replyOwnerNick : nickname + ' 评论了你的帖子' },
+      time3: { value: nowText() },
+    })
   }
 
-  return { ok: true, id: res._id, nickname: nickname, avatar: avatar }
+  return { ok: true, id: res._id, nickname: nickname, avatar: avatar, parentId: rootId, replyTo: replyTo }
 }

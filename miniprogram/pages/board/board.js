@@ -45,6 +45,22 @@ Page({
 
   goUser(e) {
     const name = e.currentTarget.dataset.name
-    wx.showToast({ title: '@' + name + ' 的个人主页还在做', icon: 'none' })
+    wx.showToast({ title: '@' + name + ' 的主页去帖子里点头像进', icon: 'none' })
+  },
+
+  // 转发给同学/群
+  onShareAppMessage() {
+    return {
+      title: '校园圈 · 本周热帖和活跃同学',
+      path: '/pages/board/board',
+    }
+  },
+
+  // 分享到朋友圈
+  onShareTimeline() {
+    return {
+      title: '校园圈 · 本周热帖和活跃同学',
+      query: '',
+    }
   },
 })

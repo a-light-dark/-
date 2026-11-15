@@ -1,8 +1,10 @@
 <!-- pages/topic/topic.wxml —— 话题页 -->
 <view class="wrap">
 
+  <view wx:if="{{notFound}}" class="empty">话题不存在，去首页看看吧</view>
+
   <!-- 话题头 -->
-  <view class="topic-head">
+  <view class="topic-head" wx:if="{{!notFound}}">
     <view class="topic-emoji">{{meta.emoji}}</view>
     <view class="topic-info">
       <view class="topic-name"># {{meta.name}}</view>
@@ -18,8 +20,8 @@
   <view wx:if="{{offline}}" class="offline-tip">当前是本地演示数据（云开发没连上）</view>
 
   <!-- 帖子列表 -->
-  <view class="post" wx:for="{{posts}}" wx:key="id" data-id="{{item.id}}" bindtap="goDetail">
-    <view class="post-head">
+  <view class="post" wx:for="{{posts}}" wx:key="id" data-id="{{item.id}}" bindtap="goDetail" hover-class="post-hover" hover-stay-time="60">
+    <view class="post-head" catchtap="goUser" data-openid="{{item.authorOpenid}}" data-anon="{{item.anonymous}}">
       <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
       <view wx:else class="avatar">{{item.avatar}}</view>
       <view class="post-user">
@@ -38,6 +40,7 @@
         wx:key="*this"
         src="{{pic}}"
         mode="aspectFill"
+        lazy-load
         data-id="{{item.id}}"
         data-src="{{pic}}"
         catchtap="previewPostImage"
@@ -56,7 +59,7 @@
   </view>
 
   <view wx:if="{{loading}}" class="hint">加载中…</view>
-  <view wx:if="{{!loading && posts.length === 0}}" class="empty">
+  <view wx:if="{{!loading && !notFound && posts.length === 0}}" class="empty">
     这个话题还没有帖子，点上面的「参与话题」发第一条吧
   </view>
 

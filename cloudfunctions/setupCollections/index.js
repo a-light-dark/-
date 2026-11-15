@@ -131,5 +131,25 @@ exports.main = async (event) => {
     result.removed = removed.stats ? removed.stats.removed : 0
   }
 
+  // 测试辅助：按内容前缀删一条帖子下的评论（客户端没有评论删除权限，只能走云函数）
+  if (event && event.removeComments) {
+    const target = event.removeComments
+    const postId = String(target.postId || '')
+    const prefix = String(target.prefix || '')
+    const got = await db.collection('comments').where({ postId }).limit(100).get().catch(function () { return { data: [] } })
+    const list = (got.data || []).filter(function (c) {
+      return prefix ? String(c.content || '').indexOf(prefix) === 0 : true
+    })
+    await Promise.all(list.map(function (c) {
+      return db.collection('comments').doc(c._id).remove().catch(function () { return null })
+    }))
+    if (postId && list.length) {
+      await db.collection('posts').doc(postId).update({
+        data: { commentCount: db.command.inc(-list.length) },
+      }).catch(function () { return null })
+    }
+    result.removedComments = list.length
+  }
+
   return { ok: true, result: result }
 }

@@ -1,0 +1,49 @@
+<view class="page">
+
+  <!-- 顶部说明 + 微信客服入口 -->
+  <view class="hero">
+    <view class="hero-emoji">💬</view>
+    <view class="hero-title">客服中心</view>
+    <view class="hero-desc">遇到问题，先在下面常见问题里找找；没解决就直接找我。</view>
+
+    <button class="chat-btn" open-type="contact" session-from="support" hover-class="chat-btn-hover">
+      💬 联系客服（微信里聊）
+    </button>
+    <view class="hero-hint">工作日 9:00–22:00 在线 · 看到会尽快回 · 48 小时内回复</view>
+  </view>
+
+  <!-- 快捷入口 -->
+  <view class="quick">
+    <view class="quick-item" bindtap="goFeedback" hover-class="quick-hover">
+      <view class="quick-emoji">📝</view>
+      <view class="quick-name">提交工单</view>
+      <view class="quick-desc">写清问题和截图</view>
+    </view>
+    <view class="quick-item" bindtap="goGuide" hover-class="quick-hover">
+      <view class="quick-emoji">📖</view>
+      <view class="quick-name">使用说明</view>
+      <view class="quick-desc">六步玩转校园圈</view>
+    </view>
+  </view>
+
+  <!-- 常见问题 -->
+  <view class="sec-title">常见问题</view>
+  <view class="faq card">
+    <view
+      class="faq-item"
+      wx:for="{{faqs}}"
+      wx:key="index"
+      data-index="{{index}}"
+      bindtap="onFaqTap"
+    >
+      <view class="faq-q">
+        <text class="faq-q-text">{{item.q}}</text>
+        <text class="faq-arrow">{{openIndex === index ? '−' : '+'}}</text>
+      </view>
+      <view class="faq-a" wx:if="{{openIndex === index}}">{{item.a}}</view>
+    </view>
+  </view>
+
+  <view class="foot">如果「联系客服」点开没反应，说明后台还没开通客服功能，先用「提交工单」，我一样能看到。</view>
+
+</view>

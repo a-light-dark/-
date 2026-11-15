@@ -22,7 +22,9 @@
     "pages/topic/topic",
     "pages/board/board",
     "pages/user/user",
-    "pages/review/review"
+    "pages/review/review",
+    "pages/guide/guide",
+    "pages/support/support"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

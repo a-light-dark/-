@@ -46,6 +46,7 @@
           wx:for-item="pic"
           src="{{pic}}"
           mode="aspectFill"
+          lazy-load
           data-pid="{{item.id}}"
           data-src="{{pic}}"
           catchtap="previewImage"
@@ -69,4 +70,7 @@
   </block>
 
   <view wx:if="{{!loading && !profile}}" class="empty">没有找到这位同学</view>
+  <view wx:if="{{!loading && !profile}}" class="empty-actions">
+    <view class="empty-btn" bindtap="goHome">回首页看看</view>
+  </view>
 </view>

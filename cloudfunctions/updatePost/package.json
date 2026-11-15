@@ -1,0 +1,9 @@
+{
+  "name": "updatePost",
+  "version": "1.0.0",
+  "description": "校园圈：编辑自己的帖子（内容安全检测）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

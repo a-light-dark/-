@@ -28,6 +28,7 @@
           class="post-img"
           src="{{pic}}"
           mode="aspectFill"
+          lazy-load
         />
       </view>
 

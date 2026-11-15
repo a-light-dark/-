@@ -160,6 +160,44 @@
   margin-top: 10rpx;
 }
 
+/* 热门话题运营位（横向滚动小卡） */
+.topic-strip {
+  white-space: nowrap;
+  padding: 20rpx 24rpx 0;
+}
+
+.topic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-right: 16rpx;
+  padding: 12rpx 20rpx;
+  background: #fff;
+  border-radius: 999rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.topic-chip-hover {
+  background: #f2f2f2;
+}
+
+.topic-chip-emoji {
+  font-size: 24rpx;
+}
+
+.topic-chip-name {
+  font-size: 24rpx;
+  color: #333;
+}
+
+.topic-chip-count {
+  font-size: 20rpx;
+  color: #07c160;
+  background: #e8f7ee;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+}
+
 /* 分类 tab（横向滚动） */
 .tabs {
   background: #fff;
@@ -180,6 +218,28 @@
   color: #111;
   font-weight: 600;
   border-bottom-color: #07c160;
+}
+
+/* 排序条：最新 / 最热 / 浏览 */
+.sort-bar {
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  background: #fff;
+}
+
+.sort-chip {
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: #f4f5f4;
+  color: #666;
+  font-size: 24rpx;
+}
+
+.sort-chip.active {
+  background: #e7f8ee;
+  color: #07a35a;
+  font-weight: 600;
 }
 
 /* 帖子卡片 */
@@ -332,4 +392,52 @@
   background: #07c160;
   color: #ffffff;
   font-weight: 600;
+}
+
+/* 点卡片时的按下反馈：让点击「有响应」 */
+.post-hover {
+  background: #f3f3f3;
+}
+
+/* 首屏骨架屏（比空白 + 加载中稳，减少闪烁） */
+.skeleton {
+  padding: 0 24rpx;
+}
+.sk-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+}
+.sk-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+.sk-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: #eeeeee;
+  margin-right: 16rpx;
+}
+.sk-line {
+  height: 26rpx;
+  border-radius: 8rpx;
+  background: #eeeeee;
+  margin-bottom: 16rpx;
+  animation: sk-breathe 1.2s ease-in-out infinite;
+}
+.sk-line-short {
+  width: 180rpx;
+  margin-bottom: 0;
+}
+.sk-line-mid {
+  width: 60%;
+  margin-bottom: 0;
+}
+@keyframes sk-breathe {
+  0% { opacity: 1; }
+  50% { opacity: 0.55; }
+  100% { opacity: 1; }
 }

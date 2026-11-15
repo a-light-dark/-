@@ -34,7 +34,7 @@
       data-id="{{item.id}}"
       bindtap="goDetail"
     >
-      <view class="fav-head">
+      <view class="fav-head" catchtap="goUser" data-openid="{{item.authorOpenid}}" data-anon="{{item.anonymous}}">
         <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
         <view wx:else class="avatar">{{item.avatar}}</view>
         <view class="fav-nick">{{item.nickname}}</view>

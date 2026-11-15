@@ -1,0 +1,95 @@
+<view class="page">
+
+  <view class="hero">
+    <view class="hero-title">校园圈 · 三分钟上手</view>
+    <view class="hero-desc">发帖聊校园、发悬赏找人帮忙、关注喜欢的话题</view>
+    <view class="hero-chips">
+      <text class="hero-chip">📝 发帖</text>
+      <text class="hero-chip">🏃 互助</text>
+      <text class="hero-chip">🏷️ 话题</text>
+      <text class="hero-chip">🔔 消息</text>
+    </view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-h"><text class="sec-no">1</text>先逛逛首页</view>
+    <view class="sec-p">首页从上到下依次是：</view>
+    <view class="line"><text class="dot">·</text><text>搜索栏：搜帖子内容、话题、同学昵称</text></view>
+    <view class="line"><text class="dot">·</text><text>4 个分类入口：跑腿代取 / 学习搭子 / 失物招领 / 脱单交友，点一下只看这类帖子（再点一次取消）</text></view>
+    <view class="line"><text class="dot">·</text><text>今日热榜 + 话题条：今天最热的帖子、最近最热的话题，点了直接进话题页</text></view>
+    <view class="line"><text class="dot">·</text><text>板块标签：最新 / 日常投稿 / 树洞 / 表白墙 / 新鲜事 / 二手 / 我关注的</text></view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-h"><text class="sec-no">2</text>发一条帖子</view>
+    <view class="sec-p">点底部中间的「＋」或「发帖」，选「发布帖子」：</view>
+    <view class="line"><text class="dot">·</text><text>写正文，最多 1000 字；点＋号最多加 6 张图</text></view>
+    <view class="line"><text class="dot">·</text><text>选话题（最多 5 个）：勾了哪个，帖子就会出现在哪个板块</text></view>
+    <view class="line"><text class="dot">·</text><text>想匿名就打开「匿名发布」，昵称会显示成「匿名同学」，别人点你头像也进不去主页</text></view>
+    <view class="btn-row">
+      <view class="btn primary" bindtap="goPublish">去发帖</view>
+    </view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-h"><text class="sec-no">3</text>发悬赏 / 帮别人跑腿</view>
+    <view class="sec-p">底部「互助」是跑腿悬赏大厅：</view>
+    <view class="line"><text class="dot">·</text><text>发需求：写清楚要做什么、给多少钱（0.01–1000 元），帖子出现在「全部订单」</text></view>
+    <view class="line"><text class="dot">·</text><text>抢单：在别人的单子上点「立即抢单」，会先弹确认框；自己发的单不能自己接</text></view>
+    <view class="line"><text class="dot">·</text><text>流程是双向确认：待接单 → 已接单 →（接单人）标记完成 →（发单人）确认完成 → 已完成</text></view>
+    <view class="line"><text class="dot">·</text><text>发单人可以在「没人接」时撤销悬赏；接单人在对方确认前可以取消接单</text></view>
+    <view class="line"><text class="dot">·</text><text>完成后的单子会进「我的收益」，双方还能互相评价（我的 → 我的收益 / 订单详情）</text></view>
+    <view class="btn-row">
+      <view class="btn" bindtap="goHelp">去互助大厅</view>
+    </view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-h"><text class="sec-no">4</text>消息和提醒</view>
+    <view class="line"><text class="dot">·</text><text>有人评论、点赞你的帖子，或者抢了你的单，底部「消息」会出现红点</text></view>
+    <view class="line"><text class="dot">·</text><text>点「一键置为已读」可以批量清掉；已读的条目会变淡</text></view>
+    <view class="line"><text class="dot">·</text><text>想让它推到微信服务通知里，点消息页的「开启上线提醒」授权一次（需要圈主先配好模板）</text></view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-h"><text class="sec-no">5</text>认识同学、关注话题</view>
+    <view class="line"><text class="dot">·</text><text>点任何帖子的头像或昵称，能进他的个人主页：看他发过的帖子、被赞数、别人给的评分</text></view>
+    <view class="line"><text class="dot">·</text><text>话题页右上角「＋ 关注」，以后首页最后一个「我关注的」标签里就只看这些话题</text></view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-h"><text class="sec-no">6</text>安全与规则</view>
+    <view class="line"><text class="dot">·</text><text>看到不合适的内容：进帖子详情 → 右下角「举报」，选一个理由，圈主会在后台处理</text></view>
+    <view class="line"><text class="dot">·</text><text>发出去的内容都会过一遍内容安全检测（文字 + 图片），违规会直接发不出去</text></view>
+    <view class="line"><text class="dot">·</text><text>自己的帖子可以「编辑」或「删除」；删掉后别人收藏里会显示「帖子已被删除」</text></view>
+    <view class="link-row">
+      <text class="link" bindtap="goRules">社区规范</text>
+      <text class="link" bindtap="goAgreement">用户协议</text>
+      <text class="link" bindtap="goPrivacy">隐私政策</text>
+      <text class="link" bindtap="goAccount">注销账号</text>
+    </view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-h"><text class="sec-no">?</text>常见问题</view>
+    <view class="qa">
+      <view class="q">为什么我的帖子出现在好多个分类？</view>
+      <view class="a">因为你勾了多个话题——勾几个就出现在几个板块（最多 5 个）。只想归一类，就只勾一个。</view>
+    </view>
+    <view class="qa">
+      <view class="q">抢了单为什么还要等对方确认？</view>
+      <view class="a">为了防止「没送到就点完成」，所以要双方各确认一次，钱的事才说得清。</view>
+    </view>
+    <view class="qa">
+      <view class="q">匿名发的帖子，别人能看出是我吗？</view>
+      <view class="a">帖子列表和详情只显示「匿名同学」，点你的头像不会进主页；只有你自己在「我的帖子」里能看到它。</view>
+    </view>
+  </view>
+
+  <view class="foot">
+    <view class="foot-text">还有不清楚的？直接问我</view>
+    <button class="btn primary" open-type="contact" session-from="guide" hover-class="btn-hover">💬 联系客服</button>
+    <view class="btn ghost" bindtap="goFeedback">提个建议 / 提交工单</view>
+  </view>
+
+</view>

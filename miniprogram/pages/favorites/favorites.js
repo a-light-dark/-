@@ -36,6 +36,14 @@ Page({
     wx.navigateTo({ url: '/pages/detail/detail?id=' + id })
   },
 
+  // 点收藏卡里的头像/昵称：进作者主页
+  goUser(e) {
+    const openid = e.currentTarget.dataset.openid
+    if (e.currentTarget.dataset.anon) { wx.showToast({ title: '匿名帖不显示作者主页', icon: 'none' }); return }
+    if (!openid) return
+    wx.navigateTo({ url: '/pages/user/user?openid=' + encodeURIComponent(openid) })
+  },
+
   // 帖子已被删除：点一下可以移除这条收藏记录
   onDeletedTap(e) {
     const id = e.currentTarget.dataset.id

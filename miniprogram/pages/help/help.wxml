@@ -31,6 +31,8 @@
     wx:key="id"
     data-id="{{item.id}}"
     bindtap="goDetail"
+    hover-class="order-hover"
+    hover-stay-time="60"
   >
     <view class="order-head">
       <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />

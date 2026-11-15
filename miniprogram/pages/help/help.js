@@ -14,8 +14,13 @@ Page({
     loading: false,
   },
 
-  // 每次显示都重新拉一次（发完互助回来能看到自己的订单）
+  // 第一次进、或别处改过订单（发悬赏/抢单/确认/撤销）才重拉，避免每次返回都白屏重载
   onShow() {
+    const app = getApp()
+    const dirty = !!(app && app.globalData && app.globalData.ordersDirty)
+    if (this._shownOnce && !dirty) return
+    if (app && app.globalData) app.globalData.ordersDirty = false
+    this._shownOnce = true
     this.loadOrders()
   },
 
@@ -77,6 +82,8 @@ Page({
             wx.hideLoading()
             if (r && r.ok) {
               wx.showToast({ title: '接单成功', icon: 'success' })
+              const app = getApp()
+              if (app && app.globalData) app.globalData.ordersDirty = true
               this.loadOrders()
               // 接完直接进详情页，双方信息一目了然
               setTimeout(() => {
@@ -111,6 +118,8 @@ Page({
             wx.hideLoading()
             if (r && r.ok) {
               wx.showToast({ title: '已标记，等对方确认', icon: 'none' })
+              const app = getApp()
+              if (app && app.globalData) app.globalData.ordersDirty = true
               this.loadOrders()
             } else {
               wx.showToast({ title: (r && r.msg) || '操作失败', icon: 'none' })

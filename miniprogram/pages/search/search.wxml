@@ -67,7 +67,7 @@
       data-id="{{item.id}}"
       bindtap="goDetail"
     >
-      <view class="post-head">
+      <view class="post-head" catchtap="goUser" data-openid="{{item.authorOpenid}}" data-anon="{{item.anonymous}}">
         <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
         <view wx:else class="avatar">{{item.avatar}}</view>
         <view class="head-info">
@@ -86,6 +86,7 @@
           wx:for-item="pic"
           src="{{pic}}"
           mode="aspectFill"
+          lazy-load
           data-pid="{{item.id}}"
           data-src="{{pic}}"
           catchtap="previewPostImage"

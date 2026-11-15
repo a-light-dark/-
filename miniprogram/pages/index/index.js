@@ -20,9 +20,16 @@ Page({
     followTab: TABS.length - 1, // 「我关注的」是最后一个 tab
     followedTags: [],           // 我关注了哪些话题
     entryTag: '',      // 分类入口筛的话题（空 = 没筛）
+    sort: 'new',       // 排序：new 最新 / hot 最热 / views 最多浏览
+    sortOptions: [
+      { key: 'new', label: '最新' },
+      { key: 'hot', label: '最热' },
+      { key: 'views', label: '浏览' },
+    ],
     posts: [],
     hotPost: null,
     hotIsToday: false, // 热榜是不是「今天」的帖子
+    hotTopics: [],     // 热门话题运营位（按最近帖子标签计数）
     loading: false,
     hasMore: true,
     offline: false, // true = 正在用本地演示数据
@@ -30,19 +37,32 @@ Page({
   },
 
   onLoad() {
-    this.loadFollows().then(() => this.loadFirst())
+    // 首屏只拉一次列表：关注列表等真正切到「我关注的」时再拉，少一次数据库往返
+    this.loadFirst()
     this.loadHot()
+    this.loadHotTopics()
     // 没同意过隐私政策就先弹提示（同意后不再打扰）
     if (!wx.getStorageSync('privacyAgreed')) {
       this.setData({ privacyVisible: true })
     }
   },
 
+  // 每个 tab / 分类入口 / 排序组合一份缓存，20 秒内切回来直接用，不再白屏重拉
+  cacheKey() {
+    const tail = ':' + (this.data.sort || 'new')
+    if (this.isFollowTab()) return 'follow' + tail
+    if (this.data.entryTag) return 'entry:' + this.data.entryTag + tail
+    return 'tab:' + this.data.currentTab + tail
+  },
+
   // 我关注的话题（“我关注的” tab 用它筛帖子）
   loadFollows() {
     return api.fetchFollowedTopics()
       .then((tags) => {
-        this.setData({ followedTags: tags || [] })
+        const next = tags || []
+        const changed = JSON.stringify(next) !== JSON.stringify(this.data.followedTags || [])
+        if (changed && this._cache) this._cache.follow = null
+        this.setData({ followedTags: next })
       })
       .catch(() => {})
   },
@@ -82,14 +102,14 @@ Page({
   onShow() {
     const app = getApp()
     const dirty = !!(app && app.globalData && app.globalData.postsDirty)
-    // 在话题页可能刚关注/取关过，回来顺手刷新一下关注列表
-    this.loadFollows().then(() => {
-      if (this._shownOnce && this.isFollowTab()) this.loadFirst()
-    })
     if (this._shownOnce && dirty) {
       app.globalData.postsDirty = false
-      this.loadFirst()
+      this._cache = {}
+      this.loadFollows().then(() => this.loadFirst(true))
       this.loadHot()
+    } else if (this._shownOnce && this.isFollowTab()) {
+      // 从话题页返回：关注状态可能变了，只刷新「我关注的」
+      this.loadFollows().then(() => this.loadFirst(true))
     }
     this._shownOnce = true
   },
@@ -101,18 +121,35 @@ Page({
     return TABS[this.data.currentTab]
   },
 
-  // 第一页（下拉刷新也走这里）
-  loadFirst() {
+  // 第一页（下拉刷新、刚发过帖时传 true 跳过缓存）
+  loadFirst(force) {
     const tag = this.currentTag()
+    const key = this.cacheKey()
+    this._cache = this._cache || {}
+    const cached = this._cache[key]
+    if (!force && cached && Date.now() - cached.ts < 20000) {
+      this.setData({
+        posts: cached.list,
+        hasMore: cached.hasMore,
+        offline: cached.offline,
+        loading: false,
+      })
+      return Promise.resolve()
+    }
     this.setData({ loading: true })
 
-    // 「我关注的」：取一页帖子，本地按关注的话题筛
+    // 「我关注的」：取一页帖子，本地按关注的话题筛，再按当前排序规则排
     if (this.isFollowTab()) {
       const followed = this.data.followedTags || []
-      return api.fetchPosts({ page: 0, pageSize: 30, tag: '' }).then((res) => {
+      const sortKey = this.data.sort === 'hot' ? 'likeCount' : this.data.sort === 'views' ? 'views' : 'createdAt'
+      return api.fetchPosts({ page: 0, pageSize: 30, tag: '', sort: this.data.sort }).then((res) => {
         const list = (res.list || []).filter(function (p) {
           return (p.tags || []).some(function (t) { return followed.indexOf(t) > -1 })
         })
+        if (this.data.sort !== 'new') {
+          list.sort(function (a, b) { return (b[sortKey] || 0) - (a[sortKey] || 0) })
+        }
+        this._cache[key] = { list: list, hasMore: false, offline: !!res.offline, ts: Date.now() }
         this.setData({
           posts: list,
           loading: false,
@@ -126,7 +163,8 @@ Page({
       })
     }
 
-    return api.fetchPosts({ page: 0, pageSize: PAGE_SIZE, tag: tag }).then((res) => {
+    return api.fetchPosts({ page: 0, pageSize: PAGE_SIZE, tag: tag, sort: this.data.sort }).then((res) => {
+      this._cache[key] = { list: res.list, hasMore: res.hasMore, offline: !!res.offline, ts: Date.now() }
       this.setData({
         posts: res.list,
         loading: false,
@@ -148,6 +186,13 @@ Page({
     }).catch(() => {})
   },
 
+  // 热门话题运营位：最近 200 条帖子按标签计数，取前 6 个
+  loadHotTopics() {
+    api.fetchHotTopics(6).then((list) => {
+      this.setData({ hotTopics: list || [] })
+    }).catch(() => {})
+  },
+
   // 上拉加载下一页（「我关注的」只取一页，不做分页）
   loadMore() {
     if (this.data.loading || !this.data.hasMore) return
@@ -155,9 +200,13 @@ Page({
     const tag = this.currentTag()
     const nextPage = Math.floor(this.data.posts.length / PAGE_SIZE)
     this.setData({ loading: true })
-    api.fetchPosts({ page: nextPage, pageSize: PAGE_SIZE, tag: tag }).then((res) => {
+    api.fetchPosts({ page: nextPage, pageSize: PAGE_SIZE, tag: tag, sort: this.data.sort }).then((res) => {
+      const list = this.data.posts.concat(res.list)
+      const key = this.cacheKey()
+      this._cache = this._cache || {}
+      this._cache[key] = { list: list, hasMore: res.hasMore, offline: this.data.offline, ts: Date.now() }
       this.setData({
-        posts: this.data.posts.concat(res.list),
+        posts: list,
         loading: false,
         hasMore: res.hasMore,
       })
@@ -172,7 +221,7 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.loadFirst().then(() => this.loadHot()).then(() => wx.stopPullDownRefresh())
+    this.loadFirst(true).then(() => this.loadHot()).then(() => wx.stopPullDownRefresh())
   },
 
   onTabTap(e) {
@@ -204,6 +253,14 @@ Page({
     this.loadFirst()
   },
 
+  // 切换排序：最新 / 最热（点赞）/ 浏览
+  onSortTap(e) {
+    const sort = e.currentTarget.dataset.sort || 'new'
+    if (sort === this.data.sort) return
+    this.setData({ sort: sort })
+    this.loadFirst(true)
+  },
+
   goDetail(e) {
     const id = e.currentTarget.dataset.id
     if (!id) return
@@ -222,6 +279,7 @@ Page({
   // 点帖子作者头像/昵称：进他的个人主页（catchtap，不会跳到帖子详情）
   goUser(e) {
     const openid = e.currentTarget.dataset.openid
+    if (e.currentTarget.dataset.anon) { wx.showToast({ title: '匿名帖不显示作者主页', icon: 'none' }); return }
     if (!openid) {
       wx.showToast({ title: '演示数据没有主页', icon: 'none' })
       return
@@ -246,6 +304,14 @@ Page({
     return {
       title: '校园圈 · 分享校园里的新鲜事',
       path: '/pages/index/index',
+    }
+  },
+
+  // 分享到朋友圈
+  onShareTimeline() {
+    return {
+      title: '校园圈 · 校园里的新鲜事都在这里',
+      query: '',
     }
   },
 

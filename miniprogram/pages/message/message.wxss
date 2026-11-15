@@ -30,6 +30,71 @@
   border-color: #ddd;
 }
 
+/* 正在处理一键已读 */
+.read-all.busy {
+  color: #999;
+  border-color: #ddd;
+  opacity: 0.8;
+}
+
+/* 标题旁的未读数 */
+.msg-count {
+  font-size: 22rpx;
+  color: #07c160;
+  margin-left: 12rpx;
+  font-weight: 400;
+}
+
+/* 已读消息淡一点，未读保持醒目 */
+.notice.read {
+  opacity: 0.68;
+}
+
+/* 订阅提醒卡片 */
+.subscribe {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  background: linear-gradient(120deg, #eef9f2, #f7fffa);
+  border: 1rpx solid #d5f0e1;
+}
+
+.subscribe-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.subscribe-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1a7f4b;
+}
+
+.subscribe-desc {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #6b8b7a;
+  line-height: 1.5;
+}
+
+.subscribe-btn {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 24rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  font-size: 24rpx;
+  color: #fff;
+  background: #07c160;
+  border-radius: 28rpx;
+}
+
+.subscribe-btn::after {
+  border: none;
+}
+
 /* 消息条目 */
 .notice {
   display: flex;
@@ -120,4 +185,32 @@
   padding: 0 60rpx;
   text-align: center;
   line-height: 1.6;
+}
+
+/* 点消息时的按下反馈 */
+.notice-hover {
+  background: #f7f7f7;
+}
+
+/* 分类 tab：全部 / 评论 / 点赞 / 订单 */
+.type-tabs {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.type-tab {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  border-radius: 999rpx;
+  background: #fff;
+  color: #666;
+  font-size: 26rpx;
+}
+
+.type-tab.active {
+  background: #e7f8ee;
+  color: #07a35a;
+  font-weight: 600;
 }

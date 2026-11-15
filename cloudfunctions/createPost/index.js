@@ -6,6 +6,12 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
+// 允许的话题白名单：只收这几个名字，防止客户端塞任意字符串当标签
+const TOPIC_NAMES = [
+  '日常投稿', '树洞', '表白墙', '新鲜事', '二手',
+  '跑腿代取', '学习搭子', '失物招领', '脱单交友',
+]
+
 // 调微信文字内容安全接口
 // suggest: pass 通过 / review 人工审核 / risky 违规
 // 接口本身报错（没权限、超频、网络）时先放行并打日志，避免整个功能不可用
@@ -63,7 +69,9 @@ function checkImageGuarded(fileID) {
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   const content = String(event.content || '').trim()
-  const tags = Array.isArray(event.tags) ? event.tags.slice(0, 5) : []
+  const tags = Array.isArray(event.tags)
+    ? event.tags.filter((t) => TOPIC_NAMES.indexOf(t) > -1).slice(0, 5)
+    : []
   const anonymous = !!event.anonymous
   const rawImages = Array.isArray(event.images) ? event.images.slice(0, 9) : []
   const images = rawImages.map((v) => String(v || '')).filter(Boolean)
@@ -122,6 +130,7 @@ exports.main = async (event) => {
       images: images,
       nickname: nickname,
       avatar: avatar,
+      anonymous: anonymous,
       likeCount: 0,
       commentCount: 0,
       createdAt: db.serverDate(),

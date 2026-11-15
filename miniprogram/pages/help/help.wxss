@@ -185,3 +185,8 @@
   font-size: 24rpx;
   color: #888;
 }
+
+/* 点订单卡时的按下反馈 */
+.order-hover {
+  background: #f3f3f3;
+}

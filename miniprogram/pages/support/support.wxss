@@ -1,0 +1,89 @@
+/* pages/support/support.wxss —— 客服中心 */
+
+.page {
+  min-height: 100vh;
+  background: #f6f6f6;
+  padding: 24rpx 24rpx 60rpx;
+  box-sizing: border-box;
+}
+
+/* 顶部 */
+.hero {
+  background: linear-gradient(135deg, #07c160 0%, #0aa06e 100%);
+  border-radius: 24rpx;
+  padding: 40rpx 32rpx 32rpx;
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.25);
+}
+.hero-emoji { font-size: 64rpx; line-height: 1; }
+.hero-title { margin-top: 12rpx; font-size: 38rpx; font-weight: 700; }
+.hero-desc { margin-top: 12rpx; font-size: 26rpx; opacity: 0.92; line-height: 1.6; }
+
+.chat-btn {
+  margin: 32rpx auto 0;
+  width: 100%;
+  background: #fff;
+  color: #07a35a;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-radius: 44rpx;
+  padding: 20rpx 0;
+  line-height: 1.4;
+}
+.chat-btn::after { border: none; }
+.chat-btn-hover { opacity: 0.85; }
+.hero-hint { margin-top: 16rpx; font-size: 22rpx; opacity: 0.8; }
+
+/* 快捷入口 */
+.quick {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+.quick-item {
+  flex: 1;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+.quick-hover { background: #f2f2f2; }
+.quick-emoji { font-size: 40rpx; }
+.quick-name { margin-top: 8rpx; font-size: 28rpx; font-weight: 600; color: #333; }
+.quick-desc { margin-top: 4rpx; font-size: 22rpx; color: #999; }
+
+/* 常见问题 */
+.sec-title {
+  margin: 32rpx 8rpx 12rpx;
+  font-size: 26rpx;
+  color: #999;
+}
+.faq { padding: 4rpx 24rpx; }
+.faq-item { padding: 24rpx 0; border-bottom: 1rpx solid #f0f0f0; }
+.faq-item:last-child { border-bottom: none; }
+.faq-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.faq-q-text { flex: 1; font-size: 28rpx; color: #333; line-height: 1.5; }
+.faq-arrow { font-size: 34rpx; color: #bbb; line-height: 1; }
+.faq-a {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.7;
+  background: #f8f8f8;
+  border-radius: 12rpx;
+  padding: 16rpx 18rpx;
+}
+
+.foot {
+  margin: 32rpx 12rpx 0;
+  font-size: 22rpx;
+  color: #aaa;
+  line-height: 1.7;
+  text-align: center;
+}

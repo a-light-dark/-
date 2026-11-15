@@ -79,6 +79,14 @@ Page({
     wx.navigateTo({ url: '/pages/detail/detail?id=' + id })
   },
 
+  // 点搜索结果里的头像/昵称：进他的个人主页
+  goUser(e) {
+    const openid = e.currentTarget.dataset.openid
+    if (e.currentTarget.dataset.anon) { wx.showToast({ title: '匿名帖不显示作者主页', icon: 'none' }); return }
+    if (!openid) return
+    wx.navigateTo({ url: '/pages/user/user?openid=' + encodeURIComponent(openid) })
+  },
+
   previewPostImage(e) {
     const pid = e.currentTarget.dataset.pid
     const src = e.currentTarget.dataset.src

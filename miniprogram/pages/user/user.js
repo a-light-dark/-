@@ -65,11 +65,25 @@ Page({
     wx.navigateTo({ url: '/pages/profile/profile' })
   },
 
+  // 主页不存在时的出口
+  goHome() {
+    wx.switchTab({ url: '/pages/index/index' })
+  },
+
   onShareAppMessage() {
     const name = (this.data.profile && this.data.profile.nickname) || '同学'
     return {
       title: name + ' 的校园圈主页',
       path: '/pages/user/user?openid=' + encodeURIComponent(this.data.openid),
+    }
+  },
+
+  // 分享到朋友圈
+  onShareTimeline() {
+    const name = (this.data.profile && this.data.profile.nickname) || '同学'
+    return {
+      title: name + ' 的校园圈主页',
+      query: 'openid=' + encodeURIComponent(this.data.openid || ''),
     }
   },
 })

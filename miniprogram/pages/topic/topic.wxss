@@ -213,3 +213,8 @@ page {
   font-size: 26rpx;
   color: #999;
 }
+
+/* 点帖子卡时的按下反馈 */
+.post-hover {
+  background: #f3f3f3;
+}

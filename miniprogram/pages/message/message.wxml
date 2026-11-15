@@ -3,8 +3,30 @@
 
   <!-- 标题栏 -->
   <view class="msg-head">
-    <view class="msg-title">消息列表</view>
-    <view class="read-all {{unread ? '' : 'disabled'}}" bindtap="readAll">一键置为已读</view>
+    <view class="msg-title">消息列表<text class="msg-count" wx:if="{{unread}}">{{unread}} 条未读</text></view>
+    <view class="read-all {{unread ? '' : 'disabled'}} {{readingAll ? 'busy' : ''}}" bindtap="readAll">
+      {{readingAll ? '处理中…' : '一键置为已读'}}
+    </view>
+  </view>
+
+  <!-- 订阅提醒：授权一次，有人评论/点赞/抢单时微信会推送通知 -->
+  <view class="subscribe card" wx:if="{{subscribeReady}}">
+    <view class="subscribe-main">
+      <view class="subscribe-title">🔔 开启上线提醒</view>
+      <view class="subscribe-desc">授权一次，有人评论、点赞你的帖子或接了你的悬赏时，微信会直接推送给你</view>
+    </view>
+    <button class="subscribe-btn" bindtap="onSubscribe">去开启</button>
+  </view>
+
+  <!-- 分类 tab：全部 / 评论 / 点赞 / 订单 -->
+  <view class="type-tabs">
+    <view
+      class="type-tab {{typeTab === item.key ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="onTypeTap"
+    >{{item.label}}</view>
   </view>
 
   <!-- 加载中 -->
@@ -15,17 +37,20 @@
   <!-- 空状态 -->
   <view wx:if="{{!loading && list.length === 0}}" class="empty-state">
     <view class="empty-icon">💬</view>
-    <view class="empty-text">还没有收到消息</view>
-    <view class="empty-text small">有人评论、点赞你的帖子，或接了你的悬赏时会出现在这里</view>
+    <view class="empty-text">{{typeTab === 'like' ? '还没有收到点赞' : typeTab === 'order' ? '还没有订单消息' : typeTab === 'comment' ? '还没有评论消息' : '还没有收到消息'}}</view>
+    <view wx:if="{{typeTab === 'all'}}" class="empty-text small">有人评论、点赞你的帖子，或接了你的悬赏时会出现在这里</view>
   </view>
 
-  <!-- 消息条目 -->
+  <!-- 消息条目：长按可标为已读 / 删除 -->
   <view
     wx:for="{{list}}"
     wx:key="id"
-    class="notice card"
+    class="notice card {{item.read ? 'read' : ''}}"
     data-index="{{index}}"
     bindtap="onNoticeTap"
+    bindlongpress="onNoticeLongPress"
+    hover-class="notice-hover"
+    hover-stay-time="60"
   >
     <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.fromAvatar}}" mode="aspectFill" />
     <view wx:else class="avatar">{{item.fromAvatar}}</view>

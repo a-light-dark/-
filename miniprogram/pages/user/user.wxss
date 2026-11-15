@@ -140,3 +140,20 @@
   color: #999999;
   margin-left: 16rpx;
 }
+
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  padding: 8rpx 0 40rpx;
+}
+
+.empty-btn {
+  padding: 0 40rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #0bbf63, #07a35a);
+  color: #fff;
+  font-size: 28rpx;
+}
+

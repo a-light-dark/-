@@ -8,6 +8,7 @@ Page({
     posts: [],
     loading: true,
     offline: false,
+    notFound: false,    // 没带话题名进来（比如直接从分享链接打开空参数）
     following: false,   // 我有没有关注这个话题
     followBusy: false,  // 防止连点
   },
@@ -15,7 +16,8 @@ Page({
   onLoad(options) {
     const tag = decodeURIComponent((options && options.tag) || '')
     if (!tag) {
-      wx.navigateBack({ delta: 1 })
+      // 没有话题名：不硬退（可能是 reLaunch/分享进来的，没有上一页），显示空状态
+      this.setData({ loading: false, notFound: true })
       return
     }
     this.setData({ tag: tag, meta: api.topicMeta(tag) })
@@ -72,6 +74,14 @@ Page({
     wx.navigateTo({ url: '/pages/detail/detail?id=' + id })
   },
 
+  // 点话题页里的头像/昵称：进作者主页
+  goUser(e) {
+    const openid = e.currentTarget.dataset.openid
+    if (e.currentTarget.dataset.anon) { wx.showToast({ title: '匿名帖不显示作者主页', icon: 'none' }); return }
+    if (!openid) return
+    wx.navigateTo({ url: '/pages/user/user?openid=' + encodeURIComponent(openid) })
+  },
+
   previewPostImage(e) {
     const pid = e.currentTarget.dataset.id
     const src = e.currentTarget.dataset.src
@@ -91,5 +101,21 @@ Page({
     const app = getApp()
     app.globalData.pendingTopic = this.data.tag
     wx.switchTab({ url: '/pages/publish/publish' })
+  },
+
+  // 转发给同学/群
+  onShareAppMessage() {
+    return {
+      title: '#' + this.data.tag + ' · 校园圈话题',
+      path: '/pages/topic/topic?tag=' + encodeURIComponent(this.data.tag || ''),
+    }
+  },
+
+  // 分享到朋友圈
+  onShareTimeline() {
+    return {
+      title: '#' + this.data.tag + ' · 校园圈话题',
+      query: 'tag=' + encodeURIComponent(this.data.tag || ''),
+    }
   },
 })

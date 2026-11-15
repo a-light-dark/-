@@ -1,21 +1,24 @@
 <!-- 个人资料：改昵称、换头像 -->
 <view class="page">
-  <view class="card">
 
-    <!-- 头像：点按钮用微信的头像能力，或从相册选 -->
-    <view class="row">
-      <view class="label">头像</view>
-      <view class="avatar-cell">
-        <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+  <!-- 头像 -->
+  <view class="card avatar-card">
+    <view class="avatar-wrap">
+      <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+        <view class="avatar-inner">
           <image wx:if="{{avatarPreview}}" class="avatar-img" src="{{avatarPreview}}" mode="aspectFill" />
           <image wx:elif="{{hasAvatarImage}}" class="avatar-img" src="{{avatar}}" mode="aspectFill" />
           <text wx:else class="avatar-emoji">{{avatar}}</text>
-        </button>
-        <view class="pick-link" bindtap="onPickImage">从相册选一张 ›</view>
-      </view>
+        </view>
+      </button>
+      <view class="avatar-badge">📷</view>
     </view>
+    <view class="avatar-tip">点上面的头像，可以用微信头像</view>
+    <view class="pick-link" bindtap="onPickImage">或者从相册选一张</view>
+  </view>
 
-    <!-- 昵称 -->
+  <!-- 昵称 -->
+  <view class="card">
     <view class="row">
       <view class="label">昵称</view>
       <input
@@ -24,12 +27,15 @@
         value="{{nickname}}"
         maxlength="12"
         placeholder="2-12 个字"
+        placeholder-class="nickname-ph"
+        cursor-spacing="20"
         bindinput="onNicknameInput"
+        bindblur="onNicknameInput"
       />
     </view>
   </view>
 
-  <view class="hint">昵称和头像会用来展示你之后发的帖子、评论和互助单；已经发出去的内容保持原样。</view>
+  <view class="hint">昵称和头像会用在之后发的帖子、评论和互助单上；已经发出去的内容保持原样。</view>
 
-  <button class="save-btn" loading="{{saving}}" bindtap="onSave">保存</button>
+  <button class="save-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onSave">保存</button>
 </view>

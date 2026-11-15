@@ -3,9 +3,17 @@
 
   <view wx:if="{{loading}}" class="empty">加载中…</view>
 
+  <view wx:if="{{!loading && !post}}" class="empty">
+    帖子不存在或已被删除
+  </view>
+
+  <view wx:if="{{!loading && !post}}" class="missing-actions">
+    <view class="missing-btn" bindtap="goHome">回首页看看</view>
+  </view>
+
   <!-- 帖子正文 -->
   <view wx:if="{{post}}" class="post card">
-    <view class="post-head" catchtap="goUser" data-openid="{{post.authorOpenid}}">
+    <view class="post-head" catchtap="goUser" data-openid="{{post.authorOpenid}}" data-anon="{{post.anonymous}}">
       <image wx:if="{{post.avatarIsImage}}" class="avatar" src="{{post.avatar}}" mode="aspectFill" />
       <view wx:else class="avatar">{{post.avatar}}</view>
       <view class="head-info">
@@ -14,19 +22,20 @@
       </view>
     </view>
 
-    <view class="post-content">{{post.content}}</view>
+    <view class="post-content" bindlongpress="onPostLongPress">{{post.content}}</view>
 
     <view class="post-images" wx:if="{{post.images.length > 0}}">
-      <image
-        class="post-image"
-        wx:for="{{post.images}}"
-        wx:key="*this"
-        wx:for-item="pic"
-        src="{{pic}}"
-        mode="widthFix"
-        data-src="{{pic}}"
-        bindtap="previewImage"
-      />
+      <view class="post-image-wrap" wx:for="{{post.images}}" wx:key="*this" wx:for-item="pic">
+        <image
+          class="post-image"
+          src="{{pic}}"
+          mode="widthFix"
+          lazy-load
+          data-src="{{pic}}"
+          bindtap="previewImage"
+        />
+        <view class="wm">校园圈</view>
+      </view>
     </view>
 
     <view class="post-foot">
@@ -41,9 +50,10 @@
         ># {{tag}}</view>
       </view>
       <view class="stats">
-        <view class="stat" bindtap="toggleLike">👍 {{post.likeCount}}</view>
-        <view class="stat" bindtap="toggleCollect">⭐ {{favorited ? '已收藏' : '收藏'}}</view>
-        <view class="stat">💬 {{comments.length}}</view>
+        <view class="stat {{liked ? 'on' : ''}}" hover-class="stat-hover" hover-stay-time="80" bindtap="toggleLike">{{liked ? '💚 已赞' : '👍 点赞'}} {{post.likeCount}}</view>
+        <view class="stat {{favorited ? 'on' : ''}}" hover-class="stat-hover" hover-stay-time="80" bindtap="toggleCollect">⭐ {{favorited ? '已收藏' : '收藏'}}</view>
+        <view class="stat">👀 {{post.views || 0}}</view>
+        <view class="stat">💬 {{post.commentCount || 0}}</view>
       </view>
     </view>
 
@@ -51,30 +61,92 @@
     <view class="post-extra">
       <button class="extra-btn share-btn" open-type="share">分享给同学</button>
       <view class="extra-right">
+        <view wx:if="{{post.mine}}" class="extra-btn extra-edit" bindtap="onEdit">编辑</view>
         <view wx:if="{{post.mine}}" class="extra-btn extra-danger" bindtap="onDelete">删除这条帖子</view>
         <view wx:else class="extra-btn" bindtap="onReport">举报</view>
       </view>
     </view>
   </view>
 
-  <!-- 评论列表 -->
-  <view class="comments-title">全部评论（{{comments.length}}）</view>
+  <!-- 评论列表（楼中楼：顶层评论 + replies） -->
+  <view wx:if="{{post}}">
+    <view class="comments-title" id="comments">全部评论（{{post.commentCount || 0}}）</view>
+    <view class="mini-tip">长按评论可以复制、回复或删除</view>
 
-  <view class="comment card" wx:for="{{comments}}" wx:key="id">
-    <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
-    <view wx:else class="avatar">{{item.avatar}}</view>
-    <view class="comment-body">
-      <view class="comment-head">
-        <text class="nickname">{{item.nickname}}</text>
-        <text class="time">{{item.time}}</text>
+    <view
+      class="comment card"
+      wx:for="{{comments}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      data-content="{{item.content}}"
+      data-nick="{{item.nickname}}"
+      data-mine="{{item.mine}}"
+      data-root="{{item.id}}"
+      data-replies="{{item.replies.length}}"
+      bindlongpress="onCommentLongPress"
+    >
+      <image wx:if="{{item.avatarIsImage}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar">{{item.avatar}}</view>
+      <view class="comment-body">
+        <view class="comment-head">
+          <text class="nickname">{{item.nickname}}</text>
+          <text class="time">{{item.time}}</text>
+        </view>
+        <view class="comment-content">{{item.content}}</view>
+        <view class="comment-actions">
+          <text
+            class="reply-link"
+            data-id="{{item.id}}"
+            data-root="{{item.id}}"
+            data-nick="{{item.nickname}}"
+            bindtap="onReplyTap"
+          >回复</text>
+          <text wx:if="{{item.replies.length}}" class="reply-count">{{item.replies.length}} 条回复</text>
+        </view>
+
+        <!-- 楼中楼：这条评论下的回复 -->
+        <view class="replies" wx:if="{{item.replies.length}}">
+          <view
+            class="reply-item"
+            wx:for="{{item.replies}}"
+            wx:for-item="rep"
+            wx:key="id"
+            data-id="{{rep.id}}"
+            data-content="{{rep.content}}"
+            data-nick="{{rep.nickname}}"
+            data-mine="{{rep.mine}}"
+            data-root="{{item.id}}"
+            data-parent="1"
+            bindlongpress="onCommentLongPress"
+          >
+            <image wx:if="{{rep.avatarIsImage}}" class="avatar small" src="{{rep.avatar}}" mode="aspectFill" />
+            <view wx:else class="avatar small">{{rep.avatar}}</view>
+            <view class="reply-body">
+              <view class="reply-head">
+                <text class="nickname">{{rep.nickname}}</text>
+                <text wx:if="{{rep.replyTo}}" class="reply-to">回复 @{{rep.replyTo}}</text>
+                <text class="time">{{rep.time}}</text>
+              </view>
+              <view class="comment-content">{{rep.content}}</view>
+              <view class="comment-actions">
+                <text
+                  class="reply-link"
+                  data-id="{{rep.id}}"
+                  data-root="{{item.id}}"
+                  data-nick="{{rep.nickname}}"
+                  bindtap="onReplyTap"
+                >回复</text>
+              </view>
+            </view>
+          </view>
+        </view>
       </view>
-      <view class="comment-content">{{item.content}}</view>
     </view>
-  </view>
 
-  <!-- 空状态 -->
-  <view wx:if="{{!loading && comments.length === 0}}" class="empty">
-    还没有评论，来抢沙发！
+    <!-- 空状态 -->
+    <view wx:if="{{!loading && comments.length === 0}}" class="empty">
+      还没有评论，来抢沙发！
+    </view>
   </view>
 
   <!-- 底部占位，防止内容被输入栏挡住 -->
@@ -82,14 +154,24 @@
 </view>
 
 <!-- 底部评论输入栏 -->
-<view class="input-bar">
-  <input
-    class="input"
-    placeholder="说点什么…"
-    value="{{inputValue}}"
-    bindinput="onInput"
-    confirm-type="send"
-    bindconfirm="sendComment"
-  />
-  <view class="send-btn" bindtap="sendComment">发送</view>
+<view class="input-wrap" wx:if="{{post}}">
+  <!-- 正在回复某人时显示，点 ✕ 取消回复 -->
+  <view class="reply-hint" wx:if="{{replyId}}">
+    <text>回复 @{{replyNick}}</text>
+    <text class="reply-cancel" bindtap="onCancelReply">✕ 取消</text>
+  </view>
+  <view class="input-bar">
+    <input
+      class="input"
+      placeholder="{{replyPlaceholder}}"
+      value="{{inputValue}}"
+      focus="{{inputFocus}}"
+      confirm-hold
+      cursor-spacing="20"
+      bindinput="onInput"
+      confirm-type="send"
+      bindconfirm="sendComment"
+    />
+    <view class="send-btn" hover-class="send-hover" hover-stay-time="80" bindtap="sendComment">发送</view>
+  </view>
 </view>

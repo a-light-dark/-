@@ -9,6 +9,39 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
+// 订阅消息模板 ID：和 miniprogram/utils/subscribe.js 里保持一致；留空就跳过推送
+const TEMPLATE_IDS = {
+  comment: '',
+  like: '',
+  order: '',
+}
+const MINIPROGRAM_STATE = 'developer' // 体验版改 trial，正式版改 formal
+
+function nowText() {
+  const d = new Date(Date.now() + 8 * 3600 * 1000)
+  const pad = function (n) { return n < 10 ? '0' + n : '' + n }
+  return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) +
+    ' ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes())
+}
+
+// 发订阅消息（用户得先在小程序里授权过；没配模板、没授权都只是跳过）
+async function subscribeNotify(toOpenid, kind, page, data) {
+  const templateId = TEMPLATE_IDS[kind]
+  if (!templateId || !toOpenid) return
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: toOpenid,
+      templateId: templateId,
+      page: page,
+      lang: 'zh_CN',
+      miniprogramState: MINIPROGRAM_STATE,
+      data: data,
+    })
+  } catch (err) {
+    console.warn('订阅消息发送失败（不影响主流程）', kind, err && err.errCode, err && err.errMsg)
+  }
+}
+
 // 给某人写一条通知（失败不影响主流程）
 async function notify(toOpenid, text, orderId, fromNickname, fromAvatar) {
   if (!toOpenid) return
@@ -119,6 +152,11 @@ exports.main = async (event) => {
     if (!res.stats.updated) return { ok: false, msg: '手慢了，已经被别人接走' }
 
     await notify(d._openid, '接了你的悬赏：' + String(d.content || '').slice(0, 40), orderId, me.nickname, me.avatar)
+    await subscribeNotify(d._openid, 'order', 'pages/order/order?id=' + orderId, {
+      thing1: { value: String(d.content || '').slice(0, 20) },
+      thing2: { value: me.nickname + ' 接了你的悬赏' },
+      time3: { value: nowText() },
+    })
     return { ok: true, status: '已接单' }
   }
 
@@ -132,6 +170,11 @@ exports.main = async (event) => {
     if (!res.stats.updated) return { ok: false, msg: '当前状态不能标记完成' }
 
     await notify(d._openid, '接单人标记完成了，等你确认：' + String(d.content || '').slice(0, 40), orderId, me.nickname, me.avatar)
+    await subscribeNotify(d._openid, 'order', 'pages/order/order?id=' + orderId, {
+      thing1: { value: String(d.content || '').slice(0, 20) },
+      thing2: { value: '标记完成了，等你确认' },
+      time3: { value: nowText() },
+    })
     return { ok: true, status: '待确认' }
   }
 
@@ -144,6 +187,11 @@ exports.main = async (event) => {
     if (!res.stats.updated) return { ok: false, msg: '当前状态不能确认完成' }
 
     await notify(d.takerOpenid, '你完成的悬赏已确认：' + String(d.content || '').slice(0, 40), orderId, d.nickname || '同学', d.avatar || '😀')
+    await subscribeNotify(d.takerOpenid, 'order', 'pages/order/order?id=' + orderId, {
+      thing1: { value: String(d.content || '').slice(0, 20) },
+      thing2: { value: '发布人已确认完成，可以去评价' },
+      time3: { value: nowText() },
+    })
     return { ok: true, status: '已完成' }
   }
 
