@@ -80,17 +80,44 @@ exports.main = async (event) => {
     result.removedNoticeId = noticeId
   }
 
-  // 测试辅助：给一条帖子塞一条「别人举报的」记录（没有 _openid，模拟其他同学）
+  // 测试辅助：给一条帖子塞一条「别人举报的」记录（openid 指定举报人，可测处理结果通知）
   if (event && event.seedReport) {
     const target = event.seedReport
     const added = await db.collection('reports').add({
       data: {
+        _openid: String(target.openid || ''),
         postId: String(target.postId || ''),
         reason: String(target.reason || '垃圾广告'),
         createdAt: db.serverDate(),
       },
     })
     result.seedReportId = added._id
+  }
+
+  // 测试辅助：造一条「别人提交的」反馈（openid 指定提交人）
+  if (event && event.seedFeedback) {
+    const target = event.seedFeedback
+    const added = await db.collection('feedback').add({
+      data: {
+        _openid: String(target.openid || ''),
+        content: String(target.content || '测试反馈'),
+        contact: target.contact || '',
+        nickname: target.nickname || '测试同学',
+        avatar: target.avatar || '🙂',
+        status: '待处理',
+        createdAt: db.serverDate(),
+      },
+    })
+    result.seedFeedbackId = added._id
+  }
+
+  // 测试辅助：查某人收到的通知（开发验证用）
+  if (event && event.noticesFor) {
+    const toOpenid = String(event.noticesFor)
+    const got = await db.collection('notices').where({ toOpenid }).orderBy('createdAt', 'desc').limit(20).get().catch(function () { return { data: [] } })
+    result.noticesFor = (got.data || []).map(function (n) {
+      return { id: n._id, type: n.type, text: n.text, fromNickname: n.fromNickname, read: !!n.read }
+    })
   }
 
   // 测试辅助：造一条「别人发的」订单（owner 指定发布人，taker 指定接单人，可模拟任意状态）

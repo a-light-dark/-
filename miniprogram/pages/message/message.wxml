@@ -37,7 +37,7 @@
   <!-- 空状态 -->
   <view wx:if="{{!loading && list.length === 0}}" class="empty-state">
     <view class="empty-icon">💬</view>
-    <view class="empty-text">{{typeTab === 'like' ? '还没有收到点赞' : typeTab === 'order' ? '还没有订单消息' : typeTab === 'comment' ? '还没有评论消息' : '还没有收到消息'}}</view>
+    <view class="empty-text">{{typeTab === 'like' ? '还没有收到点赞' : typeTab === 'order' ? '还没有订单消息' : typeTab === 'comment' ? '还没有评论消息' : typeTab === 'system' ? '还没有系统消息' : '还没有收到消息'}}</view>
     <view wx:if="{{typeTab === 'all'}}" class="empty-text small">有人评论、点赞你的帖子，或接了你的悬赏时会出现在这里</view>
   </view>
 

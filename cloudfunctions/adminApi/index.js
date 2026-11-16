@@ -531,8 +531,44 @@ async function reportsList() {
 
 async function dismissReport(id) {
   if (!id) return { ok: false, msg: '缺少举报 id' }
+  let reporter = ''
+  let postId = ''
+  try {
+    const r = await db.collection('reports').doc(id).get()
+    reporter = r.data && r.data._openid
+    postId = (r.data && r.data.postId) || ''
+  } catch (err) {
+    // 举报不存在也继续删
+  }
   await db.collection('reports').doc(id).remove()
+  if (reporter && reporter !== cloud.getWXContext().OPENID) {
+    await sendSystemNotice(reporter, '你举报的内容我们看过了，感谢反馈～', postId, 'reportReplyText')
+  }
   return { ok: true }
+}
+
+// 给用户发一条「系统」类通知（圈主处理结果），失败只 warn
+async function sendSystemNotice(toOpenid, text, postId, settingKey) {
+  try {
+    const s = await db.collection('settings').where({ key: settingKey }).limit(1).get()
+    const custom = s.data && s.data[0] && String(s.data[0].value || '').trim()
+    const finalText = custom || text
+    await db.collection('notices').add({
+      data: {
+        toOpenid: toOpenid,
+        type: 'system',
+        text: finalText,
+        postId: postId || '',
+        orderId: '',
+        fromNickname: '校园圈圈主',
+        fromAvatar: '🛎',
+        read: false,
+        createdAt: db.serverDate(),
+      },
+    })
+  } catch (err) {
+    console.warn('sendSystemNotice 失败（不影响主流程）', err && err.message)
+  }
 }
 
 // ============ 用户管理 ============
@@ -619,8 +655,18 @@ async function feedbackList() {
 
 async function feedbackResolve(id) {
   if (!id) return { ok: false, msg: '缺少反馈 id' }
+  let submitter = ''
+  try {
+    const f = await db.collection('feedback').doc(id).get()
+    submitter = f.data && f.data._openid
+  } catch (err) {
+    // 反馈不存在也继续
+  }
   const res = await db.collection('feedback').doc(id).update({ data: { status: '已处理', resolvedAt: db.serverDate() } })
   if (!res.stats || res.stats.updated === 0) return { ok: false, msg: '这条反馈不存在或已经处理过了' }
+  if (submitter && submitter !== cloud.getWXContext().OPENID) {
+    await sendSystemNotice(submitter, '你提的建议我们收到啦，已经处理，谢谢！', '', 'feedbackReplyText')
+  }
   return { ok: true }
 }
 
@@ -767,10 +813,29 @@ exports.main = async (event) => {
         res = await dismissReport(event.id)
         if (res.ok) await audit('reports.dismiss', 'report', event.id, '')
         break
-      case 'reports.removePost':
+      case 'reports.removePost': {
+        // 先记下所有举报人（removePost 会连举报记录一起清掉，后查就没了）
+        let reporters = []
+        try {
+          const rs = await db.collection('reports').where({ postId: event.postId }).limit(20).get()
+          reporters = (rs.data || []).map(function (r) { return r._openid }).filter(Boolean)
+        } catch (err) {
+          console.warn('查举报人失败（不影响删帖）', err && err.message)
+        }
         res = await removePost(event.postId)
-        if (res.ok) await audit('reports.removePost', 'post', event.postId, '')
+        if (res.ok) {
+          await audit('reports.removePost', 'post', event.postId, '')
+          const openid = cloud.getWXContext().OPENID
+          const seen = {}
+          for (const rOpenid of reporters) {
+            if (rOpenid !== openid && !seen[rOpenid]) {
+              seen[rOpenid] = true
+              await sendSystemNotice(rOpenid, '你举报的帖子已经被圈主删除了，感谢反馈～', event.postId, 'reportReplyText')
+            }
+          }
+        }
         break
+      }
       case 'users.list':
         res = await usersList(event)
         break

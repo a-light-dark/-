@@ -10,12 +10,13 @@ Page({
     loading: true,
     subscribeReady: false, // 后台配了订阅模板才显示「开启提醒」
     readingAll: false,     // 正在一键已读（防连点）
-    typeTab: 'all',        // all / comment / like / order
+    typeTab: 'all',        // all / comment / like / order / system
     tabs: [
       { key: 'all', label: '全部' },
       { key: 'comment', label: '评论' },
       { key: 'like', label: '点赞' },
       { key: 'order', label: '订单' },
+      { key: 'system', label: '系统' },
     ],
   },
 

@@ -926,7 +926,7 @@ function normalizeNotice(row) {
     orderId: row.orderId || '',
     read: !!row.read,
     time: format.relativeTime(row.ts),
-    icon: row.type === 'like' ? '👍' : row.type === 'order' ? '🛵' : '💬',
+    icon: row.type === 'like' ? '👍' : row.type === 'order' ? '🛵' : row.type === 'system' ? '🛎' : '💬',
   }
 }
 

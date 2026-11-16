@@ -8,23 +8,33 @@ const db = cloud.database()
 
 exports.main = async () => {
   const out = { ok: true, announcements: [], bannerText: '' }
+  // 圈主在运营配置里可以关掉公告展示（announcementEnabled = false）
+  let enabled = true
   try {
-    const ann = await db
-      .collection('announcements')
-      .where({ active: true })
-      .orderBy('pinned', 'desc')
-      .orderBy('createdAt', 'desc')
-      .limit(5)
-      .get()
-    out.announcements = (ann.data || []).map(function (a) {
-      return { id: a._id, title: a.title, content: a.content, pinned: a.pinned === true }
-    })
+    const s = await db.collection('settings').where({ key: 'announcementEnabled' }).limit(1).get()
+    if (s.data && s.data[0] && (s.data[0].value === false || String(s.data[0].value).toLowerCase() === 'false')) enabled = false
   } catch (err) {
-    // 集合还没建/读不到时给空列表，不挡首页
+    // 集合还没建/读不到时默认开
+  }
+  if (enabled) {
+    try {
+      const ann = await db
+        .collection('announcements')
+        .where({ active: true })
+        .orderBy('pinned', 'desc')
+        .orderBy('createdAt', 'desc')
+        .limit(5)
+        .get()
+      out.announcements = (ann.data || []).map(function (a) {
+        return { id: a._id, title: a.title, content: a.content, pinned: a.pinned === true }
+      })
+    } catch (err) {
+      // 集合还没建/读不到时给空列表，不挡首页
+    }
   }
   try {
-    const s = await db.collection('settings').where({ key: 'bannerText' }).limit(1).get()
-    if (s.data && s.data[0]) out.bannerText = String(s.data[0].value || '')
+    const b = await db.collection('settings').where({ key: 'bannerText' }).limit(1).get()
+    if (b.data && b.data[0]) out.bannerText = String(b.data[0].value || '')
   } catch (err) {
     // 同上
   }

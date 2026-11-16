@@ -3,10 +3,10 @@
 const api = require('../../utils/api.js')
 
 const SETTING_META = [
-  { key: 'bannerText', name: '首页公告文案', desc: '首页紫色横幅上的那句话', placeholder: '例：🎉 校园圈体验版上线啦', max: 50 },
-  { key: 'announcementEnabled', name: '是否显示首页公告', desc: '填 true 显示 / false 隐藏（默认显示）', placeholder: 'true', max: 10 },
-  { key: 'reportReplyText', name: '举报处理回复话术', desc: '用户举报后看到的提示（预留）', placeholder: '已收到举报，谢谢你', max: 50 },
-  { key: 'feedbackReplyText', name: '反馈处理回复话术', desc: '用户提交反馈后看到的提示（预留）', placeholder: '已收到，谢谢', max: 50 },
+  { key: 'bannerText', name: '首页公告文案', desc: '首页紫色横幅上的那句话（已生效）', placeholder: '例：🎉 校园圈体验版上线啦', max: 50 },
+  { key: 'announcementEnabled', name: '是否显示首页公告', desc: '填 false 隐藏公告卡 / true 显示（默认显示）', placeholder: 'true', max: 10 },
+  { key: 'reportReplyText', name: '举报处理回复话术', desc: '你处理举报后，举报人会收到一条系统消息（已生效）', placeholder: '你举报的内容我们看过了，感谢反馈～', max: 50 },
+  { key: 'feedbackReplyText', name: '反馈处理回复话术', desc: '你标记反馈已处理后，提交人会收到系统消息（已生效）', placeholder: '你提的建议我们收到啦，已经处理，谢谢！', max: 50 },
 ]
 
 Page({
