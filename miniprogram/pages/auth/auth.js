@@ -70,6 +70,15 @@ Page({
     this.goBack()
   },
 
+  // 底部协议链接
+  goPrivacy() {
+    wx.navigateTo({ url: '/pages/privacy/privacy' })
+  },
+
+  goAgreement() {
+    wx.navigateTo({ url: '/pages/agreement/agreement' })
+  },
+
   goBack() {
     wx.navigateBack({
       fail: () => wx.switchTab({ url: '/pages/index/index' }),

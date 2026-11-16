@@ -1,106 +1,138 @@
 /* 微信授权页样式 */
 .page {
   min-height: 100vh;
-  background: #f6f6f6;
-  display: flex;
-  flex-direction: column;
+  background: #f4f6f5;
+  padding-bottom: 60rpx;
+  box-sizing: border-box;
 }
 
 /* 头部 */
 .head {
   background: linear-gradient(135deg, #07c160, #05a850);
-  padding: 90rpx 40rpx 70rpx;
+  padding: 80rpx 40rpx 96rpx;
   color: #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 .logo {
-  width: 120rpx;
-  height: 120rpx;
-  line-height: 120rpx;
+  width: 112rpx;
+  height: 112rpx;
+  line-height: 112rpx;
   text-align: center;
-  font-size: 64rpx;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 28rpx;
+  font-size: 60rpx;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 26rpx;
 }
-.head-title { margin-top: 24rpx; font-size: 40rpx; font-weight: 600; }
-.head-desc { margin-top: 8rpx; font-size: 26rpx; opacity: 0.9; }
+.head-title { margin-top: 22rpx; font-size: 42rpx; font-weight: 600; letter-spacing: 1rpx; }
+.head-desc { margin-top: 10rpx; font-size: 26rpx; opacity: 0.86; }
 
 /* 授权卡 */
 .sheet {
-  margin: -40rpx 32rpx 0;
+  margin: -56rpx 32rpx 0;
   background: #fff;
-  border-radius: 24rpx;
-  padding: 40rpx 36rpx;
-  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.06);
+  border-radius: 28rpx;
+  padding: 12rpx 36rpx;
+  box-shadow: 0 10rpx 34rpx rgba(0, 0, 0, 0.07);
+  position: relative;
 }
-.item {
+.row {
   display: flex;
-  align-items: center;
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
-  flex-wrap: wrap;
+  padding: 32rpx 0;
+  border-bottom: 1rpx solid #f2f2f2;
 }
-.item:last-of-type { border-bottom: none; }
-.item-label { width: 100rpx; font-size: 30rpx; color: #333; font-weight: 500; }
+.row:last-of-type { border-bottom: none; }
+.label {
+  width: 96rpx;
+  flex-shrink: 0;
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 600;
+  padding-top: 16rpx;
+}
+.control { flex: 1; min-width: 0; }
+.control-tip { margin-top: 16rpx; font-size: 22rpx; color: #9a9a9a; }
 
-/* 头像选择 */
+/* 头像选择（button 强制定宽，避免默认样式撑成椭圆） */
 .choose-avatar {
-  width: 128rpx;
-  height: 128rpx;
+  width: 150rpx !important;
+  height: 150rpx;
   padding: 0;
-  margin: 0;
+  margin: 0 !important;
+  background: transparent;
   border-radius: 50%;
-  overflow: hidden;
-  background: #f0f0f0;
-  border: 2rpx dashed #c9c9c9;
   line-height: 1;
+  position: relative;
+  display: block;
 }
 .choose-avatar::after { border: none; }
-.avatar-img { width: 128rpx; height: 128rpx; display: block; }
-.avatar-placeholder {
-  width: 128rpx;
-  height: 128rpx;
+.avatar-frame {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  border: 2rpx dashed #d0d0d0;
+  background: #f8f9f8;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 56rpx;
-  color: #b5b5b5;
+  overflow: hidden;
+  box-sizing: border-box;
 }
-.item-tip { width: 100%; margin: 12rpx 0 0 100rpx; font-size: 22rpx; color: #999; }
+.avatar-img { width: 140rpx; height: 140rpx; display: block; }
+.avatar-plus { font-size: 50rpx; color: #c4c4c4; line-height: 1; }
+.camera-badge {
+  position: absolute;
+  right: 2rpx;
+  bottom: 6rpx;
+  width: 46rpx;
+  height: 46rpx;
+  border-radius: 50%;
+  background: #07c160;
+  color: #fff;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(7, 193, 96, 0.35);
+}
 
 /* 昵称输入 */
 .nickname-input {
-  flex: 1;
-  min-width: 0;
-  height: 80rpx;
-  line-height: 80rpx;
-  font-size: 32rpx;
+  background: #f6f7f8;
+  border-radius: 14rpx;
+  padding: 0 24rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+  font-size: 30rpx;
   color: #333;
 }
-.ph { color: #b5b5b5; }
+.ph { color: #b8b8b8; }
 
-.privacy-note {
-  margin-top: 24rpx;
+.note {
+  margin-top: 26rpx;
   font-size: 22rpx;
-  color: #999;
-  line-height: 1.6;
+  color: #9a9a9a;
+  line-height: 1.7;
 }
+.agree { margin-top: 12rpx; font-size: 22rpx; color: #9a9a9a; padding-bottom: 28rpx; }
+.link { color: #07a35a; }
 
 /* 按钮 */
-.actions { margin: 48rpx 32rpx 0; }
+.actions { margin: 48rpx 40rpx 0; }
 .allow-btn {
   background: #07c160;
   color: #fff;
-  font-size: 32rpx;
+  font-size: 34rpx;
+  font-weight: 600;
   border-radius: 999rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  box-shadow: 0 8rpx 20rpx rgba(7, 193, 96, 0.25);
 }
 .allow-btn::after { border: none; }
 .skip-btn {
-  margin-top: 20rpx;
-  background: transparent;
-  color: #888;
+  margin-top: 28rpx;
+  text-align: center;
   font-size: 26rpx;
+  color: #999;
 }
-.skip-btn::after { border: none; }

@@ -8,41 +8,49 @@
     <view class="head-desc">获得你的头像和昵称</view>
   </view>
 
-  <!-- 授权项 -->
+  <!-- 授权卡 -->
   <view class="sheet">
     <!-- 头像 -->
-    <view class="item">
-      <view class="item-label">头像</view>
-      <button class="choose-avatar" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-        <image wx:if="{{avatarChosen}}" class="avatar-img" src="{{avatarPreview}}" mode="aspectFill" />
-        <view wx:else class="avatar-placeholder">＋</view>
-      </button>
-      <view class="item-tip">{{avatarChosen ? '已选择，再点可换' : '点击选择微信头像'}}</view>
+    <view class="row">
+      <view class="label">头像</view>
+      <view class="control">
+        <button class="choose-avatar" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+          <view class="avatar-frame">
+            <image wx:if="{{avatarChosen}}" class="avatar-img" src="{{avatarPreview}}" mode="aspectFill" />
+            <text wx:else class="avatar-plus">＋</text>
+          </view>
+          <view class="camera-badge">📷</view>
+        </button>
+        <view class="control-tip">{{avatarChosen ? '已选择，点一下可以换' : '点一下，可选用你的微信头像'}}</view>
+      </view>
     </view>
 
     <!-- 昵称 -->
-    <view class="item">
-      <view class="item-label">昵称</view>
-      <input
-        class="nickname-input"
-        type="nickname"
-        value="{{nickname}}"
-        maxlength="12"
-        placeholder="点击填入微信昵称"
-        placeholder-class="ph"
-        cursor-spacing="20"
-        bindinput="onNicknameInput"
-      />
-      <view class="item-tip">点一下输入框，微信会带出你的名字</view>
+    <view class="row">
+      <view class="label">昵称</view>
+      <view class="control">
+        <input
+          class="nickname-input"
+          type="nickname"
+          value="{{nickname}}"
+          maxlength="12"
+          placeholder="点击填入微信昵称"
+          placeholder-class="ph"
+          cursor-spacing="20"
+          bindinput="onNicknameInput"
+        />
+        <view class="control-tip">点一下输入框，微信会带出你的名字</view>
+      </view>
     </view>
 
-    <view class="privacy-note">头像和昵称只用于发帖、评论和个人主页展示，随时可在「我的 → 个人资料」修改。</view>
+    <view class="note">头像和昵称只用于发帖、评论和个人主页展示，随时可在「我的 → 个人资料」修改。</view>
+    <view class="agree">继续即表示同意 <text class="link" bindtap="goPrivacy">《隐私政策》</text> 和 <text class="link" bindtap="goAgreement">《用户协议》</text></view>
   </view>
 
   <!-- 按钮 -->
   <view class="actions">
     <button class="allow-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onAllow">允许</button>
-    <button class="skip-btn" bindtap="onSkip">跳过，先逛逛</button>
+    <view class="skip-btn" bindtap="onSkip">跳过，先逛逛</view>
   </view>
 
 </view>
