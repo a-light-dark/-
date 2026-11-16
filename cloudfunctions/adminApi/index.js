@@ -71,6 +71,13 @@ async function dashboard() {
   } catch (err) {
     console.warn('回收站计数失败（集合可能还没建）', err && err.errCode)
   }
+  let wordCount = 0
+  try {
+    const w = await db.collection('wordfilters').count()
+    wordCount = w.total
+  } catch (err) {
+    console.warn('敏感词计数失败（集合可能还没建）', err && err.errCode)
+  }
 
   // 最近 5 条举报 + 帖子信息
   const repRes = await db.collection('reports').orderBy('createdAt', 'desc').limit(5).get()
@@ -102,6 +109,7 @@ async function dashboard() {
       todayPosts: todayPosts.total,
       todayComments: todayComments.total,
       trashCount: trashCount,
+      wordCount: wordCount,
       recentReports: reports.map(function (r) {
         return { id: r._id, reason: r.reason, createdAt: ts(r.createdAt), post: postMap[r.postId] || null }
       }),
@@ -352,6 +360,46 @@ async function purgeTrash(id) {
     await db.collection('trash').doc(id).remove()
   } catch (err) {
     return { ok: false, msg: '这条回收站记录不存在了' }
+  }
+  return { ok: true }
+}
+
+// ============ 敏感词库 ============
+async function wordsList() {
+  const res = await db.collection('wordfilters').orderBy('createdAt', 'desc').limit(200).get()
+  return {
+    ok: true,
+    list: (res.data || []).map(function (w) {
+      return { id: w._id, word: w.word, createdAt: ts(w.createdAt) }
+    }),
+    total: (res.data || []).length,
+  }
+}
+
+async function wordsAdd(word) {
+  const w = String(word || '').trim()
+  if (!w) return { ok: false, msg: '词不能为空' }
+  if (w.length > 20) return { ok: false, msg: '词太长啦，20 字以内' }
+  try {
+    const countRes = await db.collection('wordfilters').count()
+    if (countRes.total >= 200) return { ok: false, msg: '词库满了（200 个），先删一些再加' }
+    const dup = await db.collection('wordfilters').where({ word: w }).limit(1).get()
+    if (dup.data && dup.data[0]) return { ok: false, msg: '这个词已经在词库里了' }
+    const added = await db.collection('wordfilters').add({
+      data: { word: w, createdAt: db.serverDate() },
+    })
+    return { ok: true, id: added._id }
+  } catch (err) {
+    return { ok: false, msg: '添加失败：' + ((err && err.errMsg) || '未知错误') }
+  }
+}
+
+async function wordsRemove(id) {
+  if (!id) return { ok: false, msg: '缺少词 id' }
+  try {
+    await db.collection('wordfilters').doc(id).remove()
+  } catch (err) {
+    return { ok: false, msg: '这个词不存在了' }
   }
   return { ok: true }
 }
@@ -689,6 +737,17 @@ exports.main = async (event) => {
       case 'trash.purge':
         res = await purgeTrash(event.id)
         if (res.ok) await audit('trash.purge', event.type || 'trash', event.id, '')
+        break
+      case 'wordfilters.list':
+        res = await wordsList()
+        break
+      case 'wordfilters.add':
+        res = await wordsAdd(event.word)
+        if (res.ok) await audit('wordfilters.add', 'wordfilter', res.id, event.word || '')
+        break
+      case 'wordfilters.remove':
+        res = await wordsRemove(event.id)
+        if (res.ok) await audit('wordfilters.remove', 'wordfilter', event.id, '')
         break
       default:
         return { ok: false, msg: '不认识的操作：' + action }

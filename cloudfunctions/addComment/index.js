@@ -57,6 +57,21 @@ async function checkText(content, scene, openid) {
   }
 }
 
+// 敏感词库（圈主在管理台维护）：本地先拦一道
+async function checkWords(content) {
+  try {
+    const res = await db.collection('wordfilters').limit(200).get()
+    const words = (res.data || []).map(function (w) { return String((w && w.word) || '').trim() }).filter(Boolean)
+    if (!words.length) return { ok: true }
+    const hit = words.find(function (w) { return content.indexOf(w) > -1 })
+    if (hit) return { ok: false, msg: '评论里有不合适的词，换一下再发' }
+    return { ok: true }
+  } catch (err) {
+    console.warn('读敏感词库失败（先放行）', err && err.errCode)
+    return { ok: true }
+  }
+}
+
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   const postId = String(event.postId || '')
@@ -101,6 +116,9 @@ exports.main = async (event) => {
 
   const check = await checkText(content, 2, OPENID) // scene 2 = 评论
   if (!check.ok) return { ok: false, msg: '评论可能不太合适，换个说法再试试', suggest: check.suggest }
+
+  const wordCheck = await checkWords(content)
+  if (!wordCheck.ok) return { ok: false, msg: wordCheck.msg }
 
   // 先看帖子作者 / 被回复的人是谁：评论成功要给他发一条消息通知
   const postDoc = await db.collection('posts').doc(postId).get().catch(function () { return null })

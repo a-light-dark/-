@@ -50,6 +50,10 @@
           <view class="stat-num">{{dash.trashCount}}</view>
           <view class="stat-label">回收站</view>
         </view>
+        <view class="stat-card">
+          <view class="stat-num">{{dash.wordCount}}</view>
+          <view class="stat-label">敏感词</view>
+        </view>
       </view>
     </block>
 

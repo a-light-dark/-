@@ -1,0 +1,32 @@
+<view class="page">
+  <view class="lock" wx:if="{{checked && !isAdmin}}">
+    <view class="lock-icon">🔒</view>
+    <view class="lock-title">这个页面只有圈主能看</view>
+  </view>
+
+  <block wx:if="{{checked && isAdmin}}">
+    <view class="head">
+      <view class="head-title">🚫 敏感词库</view>
+      <view class="head-desc">词库里的词会先于微信审核拦截：发帖、评论、发悬赏里出现就发不出去。目前共 {{total}} 个（上限 200）。</view>
+    </view>
+
+    <view class="card add-card">
+      <input class="word-input" placeholder="输入要拦的词（20 字以内）" value="{{word}}" bindinput="onWordInput" maxlength="20" confirm-type="done" bindconfirm="onAdd" />
+      <view class="add-btn {{adding ? 'disabled' : ''}}" bindtap="onAdd">加入词库</view>
+    </view>
+
+    <view class="empty" wx:if="{{!loading && list.length === 0}}">
+      <view class="empty-icon">🈳</view>
+      <view class="empty-title">词库是空的</view>
+      <view class="empty-desc">微信的内容安全已经拦掉大部分违规内容，这里可以加校园里特有的、需要手动管制的词。</view>
+      <view class="empty-btn" bindtap="goHome">回首页看看</view>
+    </view>
+
+    <view class="card word-card" wx:for="{{list}}" wx:key="id">
+      <view class="word-text">{{item.word}}</view>
+      <view class="word-del" catchtap="onRemove" data-id="{{item.id}}" data-word="{{item.word}}">删除</view>
+    </view>
+
+    <view class="loading" wx:if="{{loading}}">加载中…</view>
+  </block>
+</view>

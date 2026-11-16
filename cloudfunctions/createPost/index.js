@@ -58,6 +58,21 @@ async function checkImage(fileID) {
   }
 }
 
+// 敏感词库（圈主在管理台维护）：本地先拦一道，微信 msgSecCheck 兜底
+async function checkWords(content) {
+  try {
+    const res = await db.collection('wordfilters').limit(200).get()
+    const words = (res.data || []).map(function (w) { return String((w && w.word) || '').trim() }).filter(Boolean)
+    if (!words.length) return { ok: true }
+    const hit = words.find(function (w) { return content.indexOf(w) > -1 })
+    if (hit) return { ok: false, msg: '内容里有不合适的词，换一下再发' }
+    return { ok: true }
+  } catch (err) {
+    console.warn('读敏感词库失败（先放行）', err && err.errCode)
+    return { ok: true }
+  }
+}
+
 // 云函数默认超时只有 3 秒，图片检测卡住就先放行，别让整个发帖失败
 function checkImageGuarded(fileID) {
   return Promise.race([
@@ -116,6 +131,9 @@ exports.main = async (event) => {
 
   const textCheck = await checkText(content, 3, OPENID) // scene 3 = 论坛
   if (!textCheck.ok) return { ok: false, msg: '内容可能不太合适，换个说法再试试', suggest: textCheck.suggest }
+
+  const wordCheck = await checkWords(content)
+  if (!wordCheck.ok) return { ok: false, msg: wordCheck.msg }
 
   // 图片检测（并行），任何一张不过就整帖拒绝，并删掉刚传的文件
   if (images.length) {

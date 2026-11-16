@@ -21,6 +21,21 @@ async function checkText(content, scene, openid) {
   }
 }
 
+// 敏感词库（圈主在管理台维护）：本地先拦一道
+async function checkWords(content) {
+  try {
+    const res = await db.collection('wordfilters').limit(200).get()
+    const words = (res.data || []).map(function (w) { return String((w && w.word) || '').trim() }).filter(Boolean)
+    if (!words.length) return { ok: true }
+    const hit = words.find(function (w) { return content.indexOf(w) > -1 })
+    if (hit) return { ok: false, msg: '描述里有不合适的词，换一下再发' }
+    return { ok: true }
+  } catch (err) {
+    console.warn('读敏感词库失败（先放行）', err && err.errCode)
+    return { ok: true }
+  }
+}
+
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   const content = String(event.content || '').trim()
@@ -52,6 +67,9 @@ exports.main = async (event) => {
 
   const check = await checkText(content, 3, OPENID)
   if (!check.ok) return { ok: false, msg: '描述可能不太合适，换个说法再试试', suggest: check.suggest }
+
+  const wordCheck = await checkWords(content)
+  if (!wordCheck.ok) return { ok: false, msg: wordCheck.msg }
 
   const added = await db.collection('orders').add({
     data: {

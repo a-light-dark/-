@@ -1513,6 +1513,9 @@ function adminAuditList(page) { return callAdmin('audit.list', { page: page || 1
 function adminTrashList(page) { return callAdmin('trash.list', { page: page || 1, pageSize: 20 }) }
 function adminTrashRestore(id) { return callAdmin('trash.restore', { id: id }) }
 function adminTrashPurge(id) { return callAdmin('trash.purge', { id: id }) }
+function adminWordsList() { return callAdmin('wordfilters.list') }
+function adminWordAdd(word) { return callAdmin('wordfilters.add', { word: word }) }
+function adminWordRemove(id) { return callAdmin('wordfilters.remove', { id: id }) }
 
 /* ================= 话题关注 ================= */
 
@@ -1720,4 +1723,7 @@ module.exports = {
   adminTrashList: adminTrashList,
   adminTrashRestore: adminTrashRestore,
   adminTrashPurge: adminTrashPurge,
+  adminWordsList: adminWordsList,
+  adminWordAdd: adminWordAdd,
+  adminWordRemove: adminWordRemove,
 }
