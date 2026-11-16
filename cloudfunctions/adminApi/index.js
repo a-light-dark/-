@@ -1,4 +1,4 @@
-﻿// 云函数 adminApi —— 管理后台网关（只有管理员能用）
+// 云函数 adminApi —— 管理后台网关（只有管理员能用）
 // 设计参考 CampusHub 的「资源型网关」思路：把后台的所有动作收敛到一个函数里，
 // 前端（小程序管理台 / 将来的 Web 后台）统一调这一个函数，按 event.action 分发。
 // 所有管理动作都会写 audit_logs（谁、什么时候、对什么、做了什么）。
@@ -21,6 +21,20 @@ function isAdmin(openid) {
 
 function isOwner(openid) {
   return ADMIN_OPENIDS[0] === openid
+}
+
+// Web 后台登录态：admin_sessions 里的 token（有效期 7 天）
+async function resolveToken(token) {
+  if (!token) return null
+  try {
+    const res = await db.collection('admin_sessions').where({ token: String(token) }).limit(1).get()
+    const s = (res.data || [])[0]
+    if (!s) return null
+    if (Number(s.expiresAt || 0) < Date.now()) return null
+    return { username: s.username || 'admin' }
+  } catch (err) {
+    return null
+  }
 }
 
 // 转时间戳（毫秒），数据库里可能是 Date 或毫秒
@@ -789,12 +803,16 @@ exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   const action = String(event.action || '')
 
+  // Web 后台没有 openid，用「登录 token」鉴权；小程序继续用 openid 白名单
+  const webUser = await resolveToken(event.token)
+  const adminOk = !!webUser || isAdmin(OPENID)
+
   // 前端用它判断「我的」页要不要显示「管理台」入口
   if (action === 'isAdmin') {
-    return { ok: true, admin: isAdmin(OPENID), owner: isOwner(OPENID) }
+    return { ok: true, admin: adminOk, owner: webUser ? true : isOwner(OPENID) }
   }
 
-  if (!isAdmin(OPENID)) {
+  if (!adminOk) {
     return { ok: false, msg: '你没有管理权限' }
   }
 
@@ -864,7 +882,7 @@ exports.main = async (event) => {
         if (res.ok) await audit('users.unban', 'user', event.openid, '')
         break
       case 'users.setRole':
-        if (!isOwner(OPENID)) return { ok: false, msg: '只有超管能任免管理员' }
+        if (!(webUser || isOwner(OPENID))) return { ok: false, msg: '只有超管能任免管理员' }
         res = await setUserRole(event.openid, event.role)
         if (res.ok) await audit('users.setRole', 'user', event.openid, event.role || '取消管理员')
         break

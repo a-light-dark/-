@@ -150,3 +150,11 @@ audit.list         → 操作日志分页
 - **成本**：新增集合与查询量很小，19.9/月个人版完全够；Web 后台走静态托管免费额度
 - **许可证**：只参考设计，不引入参考项目代码；我们项目保持自有代码
 - **审计存储**：audit_logs 会随时间增长，后续加按月归档定时器（参考 CampusHub task-expire）
+
+
+## M3 进展：PC 网页后台（骨架已落地）
+
+- 已完成：`adminLogin` 云函数（账号密码 → token，sha256 存 settings，token 存 admin_sessions，7 天过期；支持 logout / whoami / changePassword）；`adminApi` 支持 token 鉴权（网页 token 或小程序 openid 二选一）。
+- 已完成：`admin/web/`（Vue 3 + Vite + Element Plus）——登录 / 工作台 / 举报处理 / 帖子管理，列表统一 20 条分页，删除走回收站。
+- 已完成：演示模式（`VITE_MOCK=true`）与生产构建（`npm run build` → `dist/`），可直接上传云开发静态托管。
+- 待做：用户管理 / 反馈 / 公告 / 配置 / 回收站 / 敏感词 / 备份 页面（接口都在 adminApi，补页面即可）；改密码 UI；token 自动续期。

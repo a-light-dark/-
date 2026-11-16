@@ -513,3 +513,34 @@ node tools/check.js
 - 登录：网页端没有微信登录，方案是「管理员账号 + 密码」——新增 `adminLogin` 云函数（密码哈希存 `settings`，登录成功发一个随机 token 存 `admin_sessions`），`adminApi` 增加 token 校验；手机端继续用 openid 白名单
 
 工作量：脚手架 + 登录 + 用户/帖子/举报/反馈/公告/配置/回收站/备份 9 个页面，约 1–2 天；先做「登录 + 举报 + 帖子」三页能跑通，再补齐其余页面。
+
+
+## PC 端后台（Web，已搭好骨架）
+
+手机端的「管理台」适合随手处理，批量操作（搜帖子、翻举报、封人）在电脑上更顺。现在加了一个独立的网页后台：
+
+| 页面 | 能做什么 |
+|---|---|
+| 登录 | 账号 `admin` + 密码（第一次是 `campus2026`），登录后拿 7 天有效的 token |
+| 工作台 | 帖子/评论/用户/订单总数 + 待处理举报/反馈 + 回收站/敏感词数量 + 最近举报 |
+| 举报处理 | 分页表格、被举报内容与作者、忽略举报、删帖（进回收站，可恢复） |
+| 帖子管理 | 关键词搜索、分页、置顶/取消置顶、删除（进回收站） |
+
+技术栈：Vue 3 + Vite + Element Plus + `@cloudbase/js-sdk`；**和手机端共用同一个 `adminApi` 云函数**，只是鉴权方式从 openid 白名单换成「账号密码换 token」（token 存 `admin_sessions`，7 天过期）。
+
+目录：`admin/web/`，详细启动/构建/部署说明见 `admin/web/README.md`。
+
+本地体验（不需要网络）：
+
+```bash
+cd admin/web
+npm install
+$env:VITE_MOCK='true'; npm run dev   # Windows PowerShell
+```
+
+连云开发：
+1. 云开发控制台 → 环境 `cloud1` → 登录授权 → 打开「匿名登录」（网页端没有微信 openid，需要匿名身份调云函数）
+2. `npm run build`，把 `dist/` 上传到 云开发 → 静态网站托管
+3. 电脑浏览器打开控制台给的网址，账号 `admin` / 密码 `campus2026`，登录后尽快改密码
+
+> 云函数清单里因此多了 `adminLogin`（共 20 个），集合多了 `admin_sessions`（共 19 个）。

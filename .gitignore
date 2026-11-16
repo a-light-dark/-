@@ -1,6 +1,9 @@
 # 依赖 / 构建产物
 node_modules/
 miniprogram_npm/
+admin/web/dist/
+admin/web/dist-mock/
+admin/web/.tmp/
 
 # 微信开发者工具本地配置（含本机路径，不要进仓库）
 project.private.config.json

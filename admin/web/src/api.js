@@ -1,0 +1,93 @@
+// 数据层：PC 后台和手机端共用同一个 adminApi 云函数
+// 网页没有 openid，所以先调 adminLogin 拿 token，之后每次调用都带上
+import cloudbase from '@cloudbase/js-sdk'
+
+const ENV = import.meta.env.VITE_TCB_ENV || 'cloud1-d6g26wz61eca836b8'
+const MOCK = String(import.meta.env.VITE_MOCK || '') === 'true'
+const TOKEN_KEY = 'campus_admin_token'
+
+let app = null
+let authed = false
+
+export const isMock = MOCK
+
+export function getToken() {
+  // 演示模式下不用真的登录也能看页面
+  if (MOCK) return localStorage.getItem(TOKEN_KEY) || 'mock-token'
+  return localStorage.getItem(TOKEN_KEY) || ''
+}
+
+export function setToken(t) {
+  if (t) localStorage.setItem(TOKEN_KEY, t)
+  else localStorage.removeItem(TOKEN_KEY)
+}
+
+async function ensureApp() {
+  if (app) return app
+  app = cloudbase.init({ env: ENV })
+  if (!authed) {
+    authed = true
+    try {
+      const auth = app.auth({ persistence: 'local' })
+      if (auth.anonymousAuthProvider) {
+        await auth.anonymousAuthProvider().signIn()
+      }
+    } catch (err) {
+      // 没开匿名登录也能继续：部分环境允许免登录调用云函数
+      console.warn('[admin] 匿名登录失败，继续尝试直接调用：', err && err.message)
+    }
+  }
+  return app
+}
+
+async function invoke(name, data) {
+  if (MOCK) {
+    const mod = await import('./mock.js')
+    return mod.mockCall(name, data)
+  }
+  const ins = await ensureApp()
+  const res = await ins.callFunction({ name, data })
+  return res.result
+}
+
+export async function login(username, password) {
+  const r = await invoke('adminLogin', { action: 'login', username, password })
+  if (r && r.ok) setToken(r.token)
+  return r
+}
+
+export async function logout() {
+  const token = getToken()
+  setToken('')
+  if (MOCK) return { ok: true }
+  try {
+    await invoke('adminLogin', { action: 'logout', token })
+  } catch (err) {
+    // 退出失败不影响本地已经清掉的 token
+  }
+  return { ok: true }
+}
+
+export async function callAdmin(action, payload = {}) {
+  const r = await invoke('adminApi', Object.assign({ action, token: getToken() }, payload))
+  if (r && r.ok === false && /权限/.test(String(r.msg || ''))) setToken('')
+  return r
+}
+
+// ===== 具体接口（页面直接用这几个）=====
+export const fetchDashboard = () => callAdmin('dashboard')
+
+export const fetchReports = (page = 1, pageSize = 20) => callAdmin('reports.list', { page, pageSize })
+export const dismissReport = (id) => callAdmin('reports.dismiss', { id })
+export const removeReportedPost = (postId) => callAdmin('reports.removePost', { postId })
+
+export const fetchPosts = (page = 1, pageSize = 20, keyword = '') => callAdmin('posts.list', { page, pageSize, keyword })
+export const setPostTop = (postId, top) => callAdmin('posts.setTop', { postId, top })
+export const removePost = (postId) => callAdmin('posts.remove', { postId })
+
+export const fetchUsers = (page = 1, pageSize = 20, keyword = '') => callAdmin('users.list', { page, pageSize, keyword })
+export const banUser = (openid, reason) => callAdmin('users.ban', { openid, reason })
+export const unbanUser = (openid) => callAdmin('users.unban', { openid })
+
+export const fetchFeedback = (page = 1, pageSize = 20) => callAdmin('feedback.list', { page, pageSize })
+export const resolveFeedback = (id) => callAdmin('feedback.resolve', { id })
