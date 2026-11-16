@@ -64,6 +64,11 @@ Page({
     wx.navigateTo({ url: '/pages/profile/profile' })
   },
 
+  // 进微信授权页（头像 + 昵称，一次性授权体验）
+  goAuth() {
+    wx.navigateTo({ url: '/pages/auth/auth' })
+  },
+
   // 登录：打开小程序就已经是微信身份（云开发自动给 openid），不需要按钮授权
   login() {
     wx.showToast({ title: '已自动登录', icon: 'none' })

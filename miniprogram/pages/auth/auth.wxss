@@ -1,0 +1,106 @@
+/* 微信授权页样式 */
+.page {
+  min-height: 100vh;
+  background: #f6f6f6;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 头部 */
+.head {
+  background: linear-gradient(135deg, #07c160, #05a850);
+  padding: 90rpx 40rpx 70rpx;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.logo {
+  width: 120rpx;
+  height: 120rpx;
+  line-height: 120rpx;
+  text-align: center;
+  font-size: 64rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 28rpx;
+}
+.head-title { margin-top: 24rpx; font-size: 40rpx; font-weight: 600; }
+.head-desc { margin-top: 8rpx; font-size: 26rpx; opacity: 0.9; }
+
+/* 授权卡 */
+.sheet {
+  margin: -40rpx 32rpx 0;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 40rpx 36rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.06);
+}
+.item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  flex-wrap: wrap;
+}
+.item:last-of-type { border-bottom: none; }
+.item-label { width: 100rpx; font-size: 30rpx; color: #333; font-weight: 500; }
+
+/* 头像选择 */
+.choose-avatar {
+  width: 128rpx;
+  height: 128rpx;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f0f0f0;
+  border: 2rpx dashed #c9c9c9;
+  line-height: 1;
+}
+.choose-avatar::after { border: none; }
+.avatar-img { width: 128rpx; height: 128rpx; display: block; }
+.avatar-placeholder {
+  width: 128rpx;
+  height: 128rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  color: #b5b5b5;
+}
+.item-tip { width: 100%; margin: 12rpx 0 0 100rpx; font-size: 22rpx; color: #999; }
+
+/* 昵称输入 */
+.nickname-input {
+  flex: 1;
+  min-width: 0;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 32rpx;
+  color: #333;
+}
+.ph { color: #b5b5b5; }
+
+.privacy-note {
+  margin-top: 24rpx;
+  font-size: 22rpx;
+  color: #999;
+  line-height: 1.6;
+}
+
+/* 按钮 */
+.actions { margin: 48rpx 32rpx 0; }
+.allow-btn {
+  background: #07c160;
+  color: #fff;
+  font-size: 32rpx;
+  border-radius: 999rpx;
+}
+.allow-btn::after { border: none; }
+.skip-btn {
+  margin-top: 20rpx;
+  background: transparent;
+  color: #888;
+  font-size: 26rpx;
+}
+.skip-btn::after { border: none; }

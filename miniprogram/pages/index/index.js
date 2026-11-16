@@ -48,6 +48,24 @@ Page({
     if (!wx.getStorageSync('privacyAgreed')) {
       this.setData({ privacyVisible: true })
     }
+    // 首次启动且资料还是系统默认昵称/头像 → 弹一次「微信授权头像昵称」页
+    this.maybeOpenAuth()
+  },
+
+  // 只弹一次：资料是默认「同学XXXX」/😀 且从没弹过授权页时，进授权页
+  maybeOpenAuth() {
+    if (this._authChecked) return
+    this._authChecked = true
+    if (wx.getStorageSync('authSeen')) return
+    const app = getApp()
+    app.ready().then(() => {
+      const u = app.globalData.userInfo
+      if (!u) return
+      const isDefault = /^同学[0-9A-Za-z]{4}$/.test(u.nickname || '') || u.avatar === '😀'
+      if (!isDefault) return
+      wx.setStorageSync('authSeen', true)
+      setTimeout(() => wx.navigateTo({ url: '/pages/auth/auth' }), 600)
+    }).catch(() => {})
   },
 
   // 公告 + banner 文案（圈主在管理台发的）

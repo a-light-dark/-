@@ -24,6 +24,7 @@
     "pages/user/user",
     "pages/review/review",
     "pages/guide/guide",
+    "pages/auth/auth",
     "pages/support/support",
     "pages/admin-home/admin-home",
     "pages/admin-users/admin-users",
