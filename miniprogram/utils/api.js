@@ -654,6 +654,7 @@ function toggleLike(postId) {
   return run(function () {
     return wx.cloud.callFunction({ name: 'likePost', data: { postId: id } }).then(function (res) {
       const result = res.result || {}
+      if (result.ok === false) throw new Error(result.msg || '点赞失败')
       return { liked: !!result.liked, likeCount: Math.max(0, result.likeCount || 0) }
     })
   }, function () {

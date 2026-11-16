@@ -120,6 +120,31 @@ exports.main = async (event) => {
     })
   }
 
+  // 测试辅助：直接改某个用户的封禁状态（验证封禁在写入口的拦截，绕过 adminApi 的白名单保护）
+  if (event && event.setBanned) {
+    const target = event.setBanned
+    const openid = String(target.openid || '')
+    const banned = target.banned === true
+    const found = await db.collection('users').where({ _openid: openid }).limit(1).get().catch(function () { return { data: [] } })
+    if (found.data && found.data[0]) {
+      await db.collection('users').doc(found.data[0]._id).update({
+        data: { banned: banned, banReason: banned ? String(target.reason || '测试封禁') : '' },
+      }).catch(function () { return null })
+    } else {
+      await db.collection('users').add({
+        data: {
+          _openid: openid,
+          nickname: '测试账号',
+          avatar: '🙂',
+          banned: banned,
+          banReason: banned ? String(target.reason || '测试封禁') : '',
+          createdAt: db.serverDate(),
+        },
+      }).catch(function () { return null })
+    }
+    result.setBanned = { openid: openid, banned: banned }
+  }
+
   // 测试辅助：造一条「别人发的」订单（owner 指定发布人，taker 指定接单人，可模拟任意状态）
   if (event && event.seedOrder) {
     const o = event.seedOrder

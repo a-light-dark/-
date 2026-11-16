@@ -90,7 +90,8 @@ Page({
           liked: wasLiked,
           post: Object.assign({}, this.data.post, { likeCount: wasCount }),
         })
-        wx.showToast({ title: '网络慢了点，再点一次', icon: 'none' })
+        const title = (err && err.message) ? err.message : '网络慢了点，再点一次'
+        wx.showToast({ title: title.length > 16 ? '点赞失败，再试一次' : title, icon: 'none' })
       })
       .then(() => {
         setTimeout(() => { this._liking = false }, 300)

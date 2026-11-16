@@ -48,7 +48,7 @@ exports.main = async (event) => {
   try {
     const me = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
     if (me.data && me.data[0] && me.data[0].banned) {
-      return { liked: false, likeCount: 0, msg: '你的账号已被限制，暂时不能点赞' }
+      return { ok: false, liked: false, likeCount: 0, msg: '你的账号已被限制，暂时不能点赞' }
     }
   } catch (err) { /* 查不到就放行，不因查询失败挡住正常用户 */ }
 
