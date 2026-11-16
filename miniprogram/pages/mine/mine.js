@@ -21,6 +21,7 @@ Page({
     postCount: 0,         // 已发帖
     likeCount: 0,         // 被点赞
     isAdmin: false,       // 是不是圈主
+    isDefaultProfile: false, // 还是系统默认昵称头像（提示去微信授权）
     menus: BASE_MENUS,    // 菜单项
   },
 
@@ -41,9 +42,13 @@ Page({
             menus: isAdmin ? BASE_MENUS.concat(['举报处理', '反馈管理', '管理台']) : BASE_MENUS,
           })
           if (!stats) return
+          const nickname = stats.nickname || ''
+          // 还是系统默认昵称（同学+openid 后 4 位）或默认表情头像 → 提示去微信授权头像昵称
+          const isDefaultProfile = /^同学[0-9A-Za-z]{4}$/.test(nickname) || stats.avatar === '😀'
           this.setData({
-            userInfo: { nickname: stats.nickname, avatar: stats.avatar },
+            userInfo: { nickname: nickname, avatar: stats.avatar },
             hasAvatarImage: api.isImagePath(stats.avatar),
+            isDefaultProfile: isDefaultProfile,
             postCount: stats.postCount,
             likeCount: stats.likeCount,
           })

@@ -13,7 +13,7 @@
       </button>
       <view class="avatar-badge">📷</view>
     </view>
-    <view class="avatar-tip">点上面的头像，可以用微信头像</view>
+    <view class="avatar-tip">点一下头像，微信会让你选「用微信头像」或相册里的图</view>
     <view class="pick-link" bindtap="onPickImage">或者从相册选一张</view>
   </view>
 
@@ -35,7 +35,7 @@
     </view>
   </view>
 
-  <view class="hint">昵称和头像会用在之后发的帖子、评论和互助单上；已经发出去的内容保持原样。</view>
+  <view class="hint">💡 点一下昵称输入框，微信会带出你的微信名字，点一下就填上了（也可以手改）。昵称和头像会用在之后发的帖子、评论和互助单上；已经发出去的内容保持原样。</view>
 
   <button class="save-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onSave">保存</button>
 </view>

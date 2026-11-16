@@ -28,6 +28,15 @@
     </view>
   </view>
 
+  <!-- 资料还是默认昵称头像：引导去微信授权 -->
+  <view class="auth-card" wx:if="{{isDefaultProfile && userInfo}}" bindtap="goProfile">
+    <view class="auth-text">
+      <view class="auth-title">🎉 授权微信头像和昵称</view>
+      <view class="auth-desc">点一下头像、再点昵称输入框，微信会直接带出你的头像和微信名字</view>
+    </view>
+    <view class="auth-btn">去授权</view>
+  </view>
+
   <!-- 两列菜单 -->
   <view class="menu-grid">
     <view

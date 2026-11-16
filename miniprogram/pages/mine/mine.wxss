@@ -83,6 +83,29 @@
   color: #fff;
 }
 
+/* 微信授权头像昵称引导卡 */
+.auth-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20rpx 24rpx 0;
+  padding: 24rpx 28rpx;
+  background: linear-gradient(90deg, #e8f9ee, #d8f5e3);
+  border: 1rpx solid #bfeccf;
+  border-radius: 20rpx;
+}
+.auth-text { flex: 1; min-width: 0; margin-right: 16rpx; }
+.auth-title { font-size: 30rpx; font-weight: 600; color: #07a35a; }
+.auth-desc { margin-top: 6rpx; font-size: 24rpx; color: #4d6b58; line-height: 1.5; }
+.auth-btn {
+  flex-shrink: 0;
+  padding: 12rpx 26rpx;
+  background: #07c160;
+  color: #fff;
+  font-size: 26rpx;
+  border-radius: 999rpx;
+}
+
 /* 两列菜单 */
 .menu-grid {
   display: flex;
