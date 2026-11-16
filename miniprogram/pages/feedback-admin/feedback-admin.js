@@ -28,7 +28,7 @@ Page({
       .then(function (admin) {
         that.setData({ isAdmin: admin, checked: true })
         if (!admin) return []
-        return api.fetchFeedbackList().catch(function (err) {
+        return api.adminFeedbackList().catch(function (err) {
           console.error('读取反馈列表失败', err)
           return []
         })
@@ -52,7 +52,7 @@ Page({
       confirmColor: '#07c160',
       success(res) {
         if (!res.confirm) return
-        api.resolveFeedback(id)
+        api.adminFeedbackResolve(id)
           .then(function () {
             wx.showToast({ title: '已标记', icon: 'none' })
             that.load()

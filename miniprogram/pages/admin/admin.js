@@ -33,7 +33,7 @@ Page({
       .then((isAdmin) => {
         this.setData({ checked: true, isAdmin: isAdmin })
         if (!isAdmin) return []
-        return api.fetchReports().then((reports) => this.setData({ reports: reports }))
+        return api.adminReportsList().then((reports) => this.setData({ reports: reports }))
       })
       .catch((err) => {
         console.error('读取举报失败', err)
@@ -50,13 +50,13 @@ Page({
 
     wx.showModal({
       title: '删除这条帖子？',
-      content: '帖子、评论、点赞、收藏都会一起删掉，不能恢复。',
+      content: '帖子会进回收站（管理台 → 回收站 可以恢复）。',
       confirmText: '删除',
       confirmColor: '#e64340',
       success: (res) => {
         if (!res.confirm) return
         wx.showLoading({ title: '删除中', mask: true })
-        api.adminDeletePost(postId)
+        api.adminReportRemovePost(postId)
           .then(() => {
             wx.hideLoading()
             wx.showToast({ title: '已删除', icon: 'success' })
@@ -84,7 +84,7 @@ Page({
       success: (res) => {
         if (!res.confirm) return
         wx.showLoading({ title: '处理中', mask: true })
-        api.dismissReport(id)
+        api.adminDismissReport(id)
           .then(() => {
             wx.hideLoading()
             wx.showToast({ title: '已忽略', icon: 'success' })

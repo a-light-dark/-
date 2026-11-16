@@ -1519,12 +1519,65 @@ function adminBanUser(openid, reason) { return callAdmin('users.ban', { openid: 
 function adminUnbanUser(openid) { return callAdmin('users.unban', { openid: openid }) }
 function adminSetUserRole(openid, role) { return callAdmin('users.setRole', { openid: openid, role: role }) }
 function adminAnnouncements() { return callAdmin('announcements.list') }
+
+// 举报列表走 adminApi（reports 集合是「所有用户不可读写」，客户端读不到，只能服务端代读）
+function adminReportsList() {
+  return callAdmin('reports.list').then(function (res) {
+    const rows = res.list || []
+    const posts = rows.map(function (r) { return r.post }).filter(Boolean)
+    return resolveImages(posts).then(function (withImg) {
+      const byId = {}
+      withImg.forEach(function (p) { byId[p.id] = p })
+      return rows.map(function (r) {
+        const p = r.post ? (byId[r.post.id] || r.post) : null
+        return {
+          id: r.id,
+          postId: r.postId,
+          reason: r.reason,
+          createdAt: r.createdAt,
+          time: format.relativeTime(r.createdAt),
+          post: p ? {
+            id: p.id,
+            content: p.content,
+            nickname: p.nickname,
+            avatar: p.avatar,
+            avatarIsImage: isImagePath(p.avatar),
+            images: p.images || [],
+            time: format.relativeTime(p.createdAt),
+          } : null,
+        }
+      })
+    })
+  })
+}
+
+// 反馈列表同样走 adminApi（feedback 集合「所有用户不可读写」）
+function adminFeedbackList() {
+  return callAdmin('feedback.list').then(function (res) {
+    return (res.list || []).map(function (f) {
+      return {
+        id: f.id,
+        content: f.content,
+        contact: f.contact,
+        nickname: f.nickname,
+        avatar: f.avatar,
+        avatarIsImage: isImagePath(f.avatar),
+        status: f.status,
+        done: f.status === '已处理',
+        time: format.relativeTime(f.ts),
+      }
+    })
+  })
+}
 function adminCreateAnnouncement(title, content, pinned) { return callAdmin('announcements.create', { title: title, content: content, pinned: !!pinned }) }
 function adminUpdateAnnouncement(id, data) { return callAdmin('announcements.update', Object.assign({ id: id }, data || {})) }
 function adminRemoveAnnouncement(id) { return callAdmin('announcements.remove', { id: id }) }
 function adminSettings() { return callAdmin('settings.get') }
 function adminSetSetting(key, value) { return callAdmin('settings.set', { key: key, value: value }) }
 function adminAuditList(page) { return callAdmin('audit.list', { page: page || 1, pageSize: 20 }) }
+function adminDismissReport(id) { return callAdmin('reports.dismiss', { id: id }) }
+function adminReportRemovePost(postId) { return callAdmin('reports.removePost', { postId: postId }) }
+function adminFeedbackResolve(id) { return callAdmin('feedback.resolve', { id: id }) }
 function adminTrashList(page) { return callAdmin('trash.list', { page: page || 1, pageSize: 20 }) }
 function adminTrashRestore(id) { return callAdmin('trash.restore', { id: id }) }
 function adminTrashPurge(id) { return callAdmin('trash.purge', { id: id }) }
@@ -1740,6 +1793,11 @@ module.exports = {
   adminSettings: adminSettings,
   adminSetSetting: adminSetSetting,
   adminAuditList: adminAuditList,
+  adminReportsList: adminReportsList,
+  adminFeedbackList: adminFeedbackList,
+  adminDismissReport: adminDismissReport,
+  adminReportRemovePost: adminReportRemovePost,
+  adminFeedbackResolve: adminFeedbackResolve,
   adminTrashList: adminTrashList,
   adminTrashRestore: adminTrashRestore,
   adminTrashPurge: adminTrashPurge,
