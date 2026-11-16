@@ -31,7 +31,8 @@
     "pages/admin-announce/admin-announce",
     "pages/admin-settings/admin-settings",
     "pages/admin-trash/admin-trash",
-    "pages/admin-words/admin-words"
+    "pages/admin-words/admin-words",
+    "pages/admin-backup/admin-backup"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

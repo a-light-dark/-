@@ -1,0 +1,40 @@
+<view class="page">
+  <view class="lock" wx:if="{{checked && !isAdmin}}">
+    <view class="lock-icon">🔒</view>
+    <view class="lock-title">这个页面只有圈主能看</view>
+  </view>
+
+  <block wx:if="{{checked && isAdmin}}">
+    <view class="head">
+      <view class="head-title">💾 数据备份</view>
+      <view class="head-desc">把 17 个集合（帖子/评论/订单/用户…）导出成一个 JSON 文件存到云存储。建议每周备份一次，下载保存到电脑或网盘。共 {{total}} 份。</view>
+    </view>
+
+    <view class="card backup-now">
+      <view class="backup-now-text">
+        <view class="backup-now-title">立即备份</view>
+        <view class="backup-now-desc">大约几秒钟，数据越多越久</view>
+      </view>
+      <view class="backup-btn {{backing ? 'disabled' : ''}}" bindtap="onBackup">{{backing ? '备份中…' : '开始备份'}}</view>
+    </view>
+
+    <view class="empty" wx:if="{{!loading && list.length === 0}}">
+      <view class="empty-icon">🗂</view>
+      <view class="empty-title">还没有备份记录</view>
+      <view class="empty-desc">点上面的「开始备份」生成第一份。</view>
+    </view>
+
+    <view class="card bak-card" wx:for="{{list}}" wx:key="id">
+      <view class="bak-main">
+        <view class="bak-title">备份 · {{item.time}}</view>
+        <view class="bak-desc">{{item.sizeLabel}}</view>
+      </view>
+      <view class="bak-actions">
+        <view class="bak-copy" catchtap="onCopy" data-id="{{item.id}}">复制链接</view>
+        <view class="bak-del" catchtap="onRemove" data-id="{{item.id}}">删除</view>
+      </view>
+    </view>
+
+    <view class="loading" wx:if="{{loading}}">加载中…</view>
+  </block>
+</view>

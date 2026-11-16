@@ -12,7 +12,7 @@
 | 消息 | `pages/message/message` | 消息通知（评论 / 点赞 / 抢单）：分类 tab（全部 / 评论 / 点赞 / 订单）、未读小红点、一键已读、点消息跳到对应帖子；首屏用 `notices` 的 `bundle` 动作一次拿「列表 + 未读数」，比原来两次调用快约一倍 |
 | 我的 | `pages/mine/mine` | 个人信息（点头像/「个人资料」进编辑页）、已发帖/被点赞（按 openid 统计）、通用菜单 |
 
-另外还有二十七个非 tab 页面：
+另外还有二十八个非 tab 页面：
 
 - `pages/detail/detail` 帖子详情页（图片点开放大、点赞、收藏（写数据库）、评论（楼中楼回复：评论下面能直接回，回复会挂到那条评论下面）、浏览量、底部评论输入栏、长按正文可复制/举报/删除（自己的）、长按评论可复制/回复/删除（自己的，顶层评论连带它的回复一起删）、自己的帖子可删可编辑、别人的帖子可举报、可转发、点话题进话题页、点头像/昵称进个人主页）
 - `pages/user/user` 个人主页（点任意帖子的头像或昵称进入：TA 的帖子、发帖数 / 被赞数 / 收到的评分，可转发；自己看自己显示「编辑资料」）
@@ -41,6 +41,7 @@
 - `pages/admin-settings/admin-settings` 运营配置（管理台进入：首页 banner 文案等 4 个运营参数 + 最近操作审计日志）
 - `pages/admin-trash/admin-trash` 回收站（管理台进入：管理端删掉的帖子和评论，可恢复或彻底删除）
 - `pages/admin-words/admin-words` 敏感词库（管理台进入：加校园特有的拦截词，发帖/评论/悬赏会先本地拦一道）
+- `pages/admin-backup/admin-backup` 数据备份（管理台进入：一键导出 17 个集合的 JSON 到云存储，可复制下载链接/删除旧备份）
 
 ## 数据是怎么走的
 
@@ -115,8 +116,9 @@ campus-forum/
 | `audit_logs` | 管理员操作日志（action/targetType/targetId） | 所有用户不可读写 |
 | `trash` | 回收站（type/docId/data，管理端删的帖子/评论先进这里，可恢复） | 所有用户不可读写 |
 | `wordfilters` | 敏感词库（word，圈主后台维护，发帖/评论/悬赏先本地拦截） | 所有用户不可读写 |
+| `backups` | 备份记录（fileID/size/createdAt，圈主一键导出数据 JSON 到云存储） | 所有用户不可读写 |
 
-> `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` / `trash` / `wordfilters` 是后加的，不用手动建：调用一次 `setupCollections` 云函数就会建好（在开发者工具里给云函数发个空参数即可，已存在会跳过）。
+> `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` / `trash` / `wordfilters` / `backups` 是后加的，不用手动建：调用一次 `setupCollections` 云函数就会建好（在开发者工具里给云函数发个空参数即可，已存在会跳过）。
 
 - 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（19 个都要）
 - 云存储：头像存 `avatars/<openid>/时间戳.png`，帖子图存 `posts/<openid>/时间戳-随机数.png`；云开发控制台 → 存储 里能看到（免费额度够用）
@@ -177,18 +179,19 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 
 > 测试可以用 `setupCollections` 塞一条别人的帖子和举报：传 `{ seedPost: '内容' }` 拿 `seedPostId`，再传 `{ seedReport: { postId, reason } }`；收尾传 `{ removePostId }`。
 
-## 管理后台（M1 后端 + M2 页面群 + M4 回收站 已上线）
+## 管理后台（M1 后端 + M2 页面群 + M4 已全部完成）
 
 完整设计见 `admin/DESIGN.md`（参考了 GitHub 开源校园社区的后台设计，两阶段：小程序内管理台 → 换公司主体后的 Web 后台）。
 
 - 后端统一走一个网关云函数 `adminApi`：所有管理动作都过「管理员白名单」校验（白名单第一人是圈主 owner），每次操作自动写 `audit_logs` 审计日志。
-- 现在已能通过 `adminApi` 做的：仪表盘统计（帖子/评论/订单/用户/待处理举报/回收站/敏感词）、帖子列表/置顶/删除、评论列表/删除、举报列表/忽略/删帖、用户列表/**封禁/解封**/设角色、反馈处理、公告增删改、运营配置（banner 文案等键值）、审计日志查询、**回收站列表/恢复/彻底删除**、**敏感词库增删**。
+- 现在已能通过 `adminApi` 做的：仪表盘统计（帖子/评论/订单/用户/待处理举报/回收站/敏感词）、帖子列表/置顶/删除、评论列表/删除、举报列表/忽略/删帖、用户列表/**封禁/解封**/设角色、反馈处理、公告增删改、运营配置（banner 文案等键值）、审计日志查询、**回收站列表/恢复/彻底删除**、**敏感词库增删**、**一键数据备份/下载/删除**。
 - 封禁会在 5 个写入口生效：发帖 `createPost`、评论 `addComment`、发悬赏 `createOrder`、抢单/标记完成 `grabOrder`、点赞 `likePost` —— 被封用户操作时返回「你的账号已被圈主限制」。
-- 新增 6 个集合：`announcements` / `bans` / `settings` / `audit_logs` / `trash` / `wordfilters`（`setupCollections` 会自动建）。
-- M2 已上线：小程序内「管理台」页面群——「我的」页（圈主可见）多出「管理台」入口，进去是仪表盘 + 8 个功能（举报处理 / 反馈管理 / 用户管理 / 帖子管理 / 公告管理 / 运营配置 / **回收站** / **敏感词库**），全部接在 `adminApi` 上。
+- 新增 7 个集合：`announcements` / `bans` / `settings` / `audit_logs` / `trash` / `wordfilters` / `backups`（`setupCollections` 会自动建）。
+- M2 已上线：小程序内「管理台」页面群——「我的」页（圈主可见）多出「管理台」入口，进去是仪表盘 + 9 个功能（举报处理 / 反馈管理 / 用户管理 / 帖子管理 / 公告管理 / 运营配置 / 回收站 / 敏感词库 / 数据备份），全部接在 `adminApi` 上。
 - M4 回收站已上线：管理端删掉的帖子和评论会先存 `trash` 集合，回收站里可「恢复」或「彻底删除」；恢复的帖子不带回它原来的点赞/评论/图片（那些删的时候就清掉了）。
 - M4 敏感词库已上线：圈主在「敏感词库」里加的词，会先于微信审核在发帖/评论/发悬赏时本地拦截（上限 200 个、每个 20 字以内）；微信 msgSecCheck 继续兜底。
-- 下一步 M3：换公司主体后做独立 Web 后台（Vue3 + Element Plus），复用同一个 `adminApi`；M4 还剩数据备份。
+- M4 数据备份已上线：圈主在「数据备份」里一键把 17 个集合导出成 JSON 存到云存储（超过 8MB 会拒绝），可复制下载链接保存到电脑/网盘，也能删除旧备份。建议每周备份一次。
+- 下一步 M3：换公司主体后做独立 Web 后台（Vue3 + Element Plus），复用同一个 `adminApi`。
 
 ## 建议反馈（用户提想法 / 圈主处理）
 

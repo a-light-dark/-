@@ -404,6 +404,102 @@ async function wordsRemove(id) {
   return { ok: true }
 }
 
+// ============ 数据备份 ============
+// 把核心集合导成 JSON 传到云存储 backups/ 下，管理台可下载链接
+const BACKUP_COLLECTIONS = [
+  'posts', 'comments', 'orders', 'users', 'likes', 'favorites',
+  'reports', 'notices', 'feedback', 'follows', 'reviews',
+  'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters',
+]
+
+async function fetchAll(name) {
+  const out = []
+  for (let page = 0; page < 20; page++) {
+    const res = await db.collection(name).skip(page * 1000).limit(1000).get()
+    out.push.apply(out, res.data || [])
+    if (!(res.data || []).length || (res.data || []).length < 1000) break
+  }
+  return out
+}
+
+async function backupCreate() {
+  const out = {}
+  for (let i = 0; i < BACKUP_COLLECTIONS.length; i++) {
+    const name = BACKUP_COLLECTIONS[i]
+    try {
+      out[name] = await fetchAll(name)
+    } catch (err) {
+      console.warn('备份读取失败（跳过）', name, err && err.errCode)
+      out[name] = []
+    }
+  }
+  out.exportedAt = new Date().toISOString()
+  const json = JSON.stringify(out)
+  if (json.length > 8 * 1024 * 1024) {
+    return { ok: false, msg: '数据太大（超过 8MB），先清理一些再备份' }
+  }
+  const tsStr = new Date().toISOString().replace(/[:.]/g, '-')
+  const cloudPath = 'backups/backup-' + tsStr + '.json'
+  const up = await cloud.uploadFile({ cloudPath: cloudPath, fileContent: Buffer.from(json, 'utf8') })
+  const added = await db.collection('backups').add({
+    data: { fileID: up.fileID, size: json.length, createdAt: db.serverDate() },
+  })
+  return { ok: true, id: added._id, size: json.length }
+}
+
+async function backupList() {
+  let countRes = { total: 0 }
+  let listRes = { data: [] }
+  try {
+    countRes = await db.collection('backups').count()
+    listRes = await db.collection('backups').orderBy('createdAt', 'desc').limit(20).get()
+  } catch (err) {
+    return { ok: false, msg: '备份记录集合还没建（跑一次 setupCollections）' }
+  }
+  return {
+    ok: true,
+    list: (listRes.data || []).map(function (b) {
+      return { id: b._id, size: b.size || 0, createdAt: ts(b.createdAt) }
+    }),
+    total: countRes.total,
+  }
+}
+
+async function backupDownload(id) {
+  if (!id) return { ok: false, msg: '缺少备份记录 id' }
+  let doc
+  try {
+    doc = await db.collection('backups').doc(id).get()
+  } catch (err) {
+    return { ok: false, msg: '这条备份记录不存在了' }
+  }
+  try {
+    const res = await cloud.getTempFileURL({ fileList: [doc.data.fileID] })
+    const f = (res.fileList || [])[0] || {}
+    if (f.status === 0) return { ok: true, url: f.tempFileURL }
+    return { ok: false, msg: '链接生成失败（' + (f.errMsg || '未知') + '）' }
+  } catch (err) {
+    return { ok: false, msg: '链接生成失败：' + ((err && err.errMsg) || '未知错误') }
+  }
+}
+
+async function backupRemove(id) {
+  if (!id) return { ok: false, msg: '缺少备份记录 id' }
+  let doc
+  try {
+    doc = await db.collection('backups').doc(id).get()
+  } catch (err) {
+    return { ok: false, msg: '这条备份记录不存在了' }
+  }
+  try {
+    await cloud.deleteFile({ fileList: [doc.data.fileID] })
+  } catch (err) {
+    console.warn('删除备份文件失败', err && err.errCode)
+  }
+  await db.collection('backups').doc(id).remove()
+  return { ok: true }
+}
+
 // ============ 举报处理 ============
 async function reportsList() {
   const res = await db.collection('reports').orderBy('createdAt', 'desc').limit(50).get()
@@ -748,6 +844,20 @@ exports.main = async (event) => {
       case 'wordfilters.remove':
         res = await wordsRemove(event.id)
         if (res.ok) await audit('wordfilters.remove', 'wordfilter', event.id, '')
+        break
+      case 'backup.create':
+        res = await backupCreate()
+        if (res.ok) await audit('backup.create', 'backup', res.id, String(res.size || 0) + 'B')
+        break
+      case 'backup.list':
+        res = await backupList()
+        break
+      case 'backup.download':
+        res = await backupDownload(event.id)
+        break
+      case 'backup.remove':
+        res = await backupRemove(event.id)
+        if (res.ok) await audit('backup.remove', 'backup', event.id, '')
         break
       default:
         return { ok: false, msg: '不认识的操作：' + action }
