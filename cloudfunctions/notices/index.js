@@ -6,7 +6,14 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const PAGE = 50
+const PAGE = 20
+
+// 统一算分页参数（page 从 1 开始，pageSize 最大 50）
+function pageArgs(event) {
+  const page = Math.max(1, Number(event && event.page) || 1)
+  const pageSize = Math.min(50, Math.max(5, Number(event && event.pageSize) || PAGE))
+  return { page: page, pageSize: pageSize }
+}
 
 // 单条通知转成前端要的格式
 function toRow(doc) {
@@ -28,16 +35,26 @@ exports.main = async (event) => {
   const action = String(event.action || 'list')
   const notices = db.collection('notices')
 
-  // 消息页首屏：一次调用同时返回「列表 + 未读数」，省掉两次往返
+  // 消息页首屏：一次调用同时返回「列表 + 未读数 + 总数」，省掉多次往返
   if (action === 'bundle') {
-    const [listRes, unreadRes] = await Promise.all([
-      notices.where({ toOpenid: OPENID }).orderBy('createdAt', 'desc').limit(PAGE).get(),
+    const p = pageArgs(event)
+    const bundleType = String(event.type || 'all')
+    const bundleWhere = { toOpenid: OPENID }
+    if (bundleType && bundleType !== 'all') bundleWhere.type = bundleType
+    const [listRes, unreadRes, totalRes] = await Promise.all([
+      notices.where(bundleWhere).orderBy('createdAt', 'desc').skip((p.page - 1) * p.pageSize).limit(p.pageSize).get(),
       notices.where({ toOpenid: OPENID, read: false }).count(),
+      notices.where(bundleWhere).count(),
     ])
+    const total = totalRes.total || 0
     return {
       ok: true,
       list: (listRes.data || []).map(toRow),
       unread: unreadRes.total || 0,
+      total: total,
+      page: p.page,
+      pageSize: p.pageSize,
+      hasMore: p.page * p.pageSize < total,
     }
   }
 
@@ -71,10 +88,22 @@ exports.main = async (event) => {
     return { ok: true, removed: removed }
   }
 
-  // 列表（最新的 50 条）；type 传 comment/like/order 就只看那一类
+  // 列表（分页）；type 传 comment/like/order/system 就只看那一类
   const type = String(event.type || '')
+  const p = pageArgs(event)
   const where = { toOpenid: OPENID }
   if (type && type !== 'all') where.type = type
-  const res = await notices.where(where).orderBy('createdAt', 'desc').limit(PAGE).get()
-  return { ok: true, list: (res.data || []).map(toRow) }
+  const [res, totalRes] = await Promise.all([
+    notices.where(where).orderBy('createdAt', 'desc').skip((p.page - 1) * p.pageSize).limit(p.pageSize).get(),
+    notices.where(where).count(),
+  ])
+  const total = totalRes.total || 0
+  return {
+    ok: true,
+    list: (res.data || []).map(toRow),
+    total: total,
+    page: p.page,
+    pageSize: p.pageSize,
+    hasMore: p.page * p.pageSize < total,
+  }
 }

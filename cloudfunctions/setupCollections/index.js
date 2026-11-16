@@ -24,6 +24,118 @@ exports.main = async (event) => {
     }
   }
 
+  // 压测辅助：分批造数据（kind = posts / comments / notices / reports / feedback）
+  // 每次最多 60 行 —— 云函数默认 3 秒超时，一次插几百行会被掐断，所以由脚本循环调用
+  if (event && event.seedBulk) {
+    const cfg = event.seedBulk || {}
+    const kind = String(cfg.kind || 'posts')
+    const count = Math.min(60, Math.max(1, Number(cfg.count) || 20))
+    const offset = Math.max(0, Number(cfg.offset) || 0)
+    const toOpenid = String(cfg.toOpenid || '')
+    const now = Date.now()
+    const docs = []
+    let ids = []
+
+    if (kind === 'comments' || kind === 'reports') {
+      const pp = await db.collection('posts').where({ nickname: db.RegExp({ regexp: '^压测同学' }) }).limit(20).get()
+      ids = (pp.data || []).map(function (p) { return p._id })
+    }
+
+    if ((kind === 'comments' || kind === 'reports') && !ids.length) {
+      result.seedBulk = { kind: kind, inserted: 0, msg: '还没有压测帖子可以挂' }
+    } else if (kind === 'posts') {
+      for (let i = 0; i < count; i++) {
+        const n = offset + i + 1
+        docs.push({
+          content: '压测帖 ' + n + ' 号：图书馆占座 / 食堂新菜 / 二手书转让，这是一条用来测管理端性能的帖子',
+          nickname: '压测同学' + (n % 20),
+          avatar: '🙂',
+          tags: ['日常投稿'],
+          images: [],
+          likeCount: n % 7,
+          commentCount: 0,
+          views: n % 13,
+          createdAt: new Date(now - n * 60000),
+        })
+      }
+    } else if (kind === 'comments') {
+      for (let i = 0; i < count; i++) {
+        const n = offset + i + 1
+        docs.push({
+          postId: ids[n % ids.length],
+          content: '压测评论 ' + n + '：这条是压测数据，用来测量大量评论时管理端的加载和分页',
+          nickname: '压测同学' + (n % 20),
+          avatar: '🙂',
+          createdAt: new Date(now - n * 30000),
+        })
+      }
+    } else if (kind === 'notices') {
+      for (let i = 0; i < count; i++) {
+        const n = offset + i + 1
+        docs.push({
+          toOpenid: toOpenid,
+          type: ['comment', 'like', 'order', 'system'][n % 4],
+          text: '压测消息 ' + n + '：同学 A 评论/点赞了你的内容',
+          fromNickname: '压测同学' + (n % 20),
+          fromAvatar: '🙂',
+          read: n % 3 === 0,
+          createdAt: new Date(now - n * 20000),
+        })
+      }
+    } else if (kind === 'reports') {
+      for (let i = 0; i < count; i++) {
+        const n = offset + i + 1
+        docs.push({
+          postId: ids[n % ids.length],
+          reason: ['垃圾广告', '色情低俗', '人身攻击', '不实信息'][n % 4],
+          createdAt: new Date(now - n * 45000),
+        })
+      }
+    } else if (kind === 'feedback') {
+      for (let i = 0; i < count; i++) {
+        const n = offset + i + 1
+        docs.push({
+          content: '压测反馈 ' + n + '：这个功能挺好用，但希望加个夜间模式',
+          contact: '',
+          nickname: '压测同学' + (n % 20),
+          avatar: '🙂',
+          status: n % 4 === 0 ? '已处理' : '待处理',
+          createdAt: new Date(now - n * 90000),
+        })
+      }
+    }
+
+    if (docs.length) {
+      // 每 10 条并发插一批，比一条条 await 快很多
+      for (let i = 0; i < docs.length; i += 10) {
+        await Promise.all(docs.slice(i, i + 10).map(function (doc) {
+          return db.collection(kind).add({ data: doc })
+        }))
+      }
+    }
+    result.seedBulk = { kind: kind, inserted: docs.length, offset: offset }
+  }
+
+  // 压测辅助：清掉 seedBulk 造的数据（按前缀批量删，顺序：举报 → 评论 → 消息 → 反馈 → 帖子）
+  if (event && event.cleanupBulk) {
+    const cfg = event.cleanupBulk || {}
+    const toOpenid = String(cfg.toOpenid || '')
+    const out = {}
+    const posts = await db.collection('posts').where({ nickname: db.RegExp({ regexp: '^压测同学' }) }).limit(500).get().catch(function () { return { data: [] } })
+    const ids = (posts.data || []).map(function (p) { return p._id })
+
+    if (ids.length) {
+      out.reports = (await db.collection('reports').where({ postId: db.command.in(ids) }).remove().catch(function () { return { stats: { removed: 0 } } })).stats.removed
+    }
+    out.comments = (await db.collection('comments').where({ nickname: db.RegExp({ regexp: '^压测同学' }) }).remove().catch(function () { return { stats: { removed: 0 } } })).stats.removed
+    if (toOpenid) {
+      out.notices = (await db.collection('notices').where({ toOpenid: toOpenid, text: db.RegExp({ regexp: '^压测消息' }) }).remove().catch(function () { return { stats: { removed: 0 } } })).stats.removed
+    }
+    out.feedback = (await db.collection('feedback').where({ nickname: db.RegExp({ regexp: '^压测同学' }) }).remove().catch(function () { return { stats: { removed: 0 } } })).stats.removed
+    out.posts = (await db.collection('posts').where({ nickname: db.RegExp({ regexp: '^压测同学' }) }).remove().catch(function () { return { stats: { removed: 0 } } })).stats.removed
+    result.cleanupBulk = out
+  }
+
   // 测试辅助：插一条别人的帖子
   if (event && event.seedPost) {
     const added = await db.collection('posts').add({

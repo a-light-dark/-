@@ -45,4 +45,5 @@
       <view class="empty-text">{{keyword ? '没搜到这个名字的同学' : '还没有用户'}}</view>
     </view>
   </block>
+  <view class="load-tip" wx:if="{{list.length}}">{{loadingMore ? '加载中…' : (hasMore ? '上拉加载更多' : '没有更多了')}}</view>
 </view>

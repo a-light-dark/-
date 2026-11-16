@@ -10,6 +10,31 @@ Page({
     keyword: '',
     list: [],
     total: 0,
+    hasMore: false,
+    loadingMore: false,
+  },
+
+  onReachBottom() {
+    this.loadMore()
+  },
+
+  loadMore() {
+    if (!this.data.hasMore || this.data.loadingMore || this.data.loading) return
+    this.setData({ loadingMore: true })
+    const next = Math.floor(this.data.list.length / 20) + 1
+    api.adminPostsList(next, this.data.keyword)
+      .then((res) => {
+        this.setData({
+          list: this.data.list.concat(res.list || []),
+          total: res.total || 0,
+          hasMore: res.hasMore === true,
+          loadingMore: false,
+        })
+      })
+      .catch(() => {
+        this.setData({ loadingMore: false })
+        wx.showToast({ title: '没加载出来，再上拉一次', icon: 'none' })
+      })
   },
 
   onShow() {
@@ -35,7 +60,7 @@ Page({
         this.setData({ checked: true, isAdmin: who.admin })
         if (!who.admin) return null
         return api.adminPostsList(1, this.data.keyword).then((res) => {
-          this.setData({ list: res.list || [], total: res.total || 0 })
+          this.setData({ list: res.list || [], total: res.total || 0, hasMore: res.hasMore === true })
         })
       })
       .catch((err) => {

@@ -1,4 +1,4 @@
-// 云函数 adminApi —— 管理后台网关（只有管理员能用）
+﻿// 云函数 adminApi —— 管理后台网关（只有管理员能用）
 // 设计参考 CampusHub 的「资源型网关」思路：把后台的所有动作收敛到一个函数里，
 // 前端（小程序管理台 / 将来的 Web 后台）统一调这一个函数，按 event.action 分发。
 // 所有管理动作都会写 audit_logs（谁、什么时候、对什么、做了什么）。
@@ -501,8 +501,12 @@ async function backupRemove(id) {
 }
 
 // ============ 举报处理 ============
-async function reportsList() {
-  const res = await db.collection('reports').orderBy('createdAt', 'desc').limit(50).get()
+async function reportsList(event) {
+  const page = Math.max(1, Number(event && event.page) || 1)
+  const pageSize = Math.min(50, Math.max(5, Number(event && event.pageSize) || 20))
+  const countRes = await db.collection('reports').count()
+  const total = countRes.total || 0
+  const res = await db.collection('reports').orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
   const reports = res.data || []
   const postIds = reports.map(function (r) { return r.postId }).filter(Boolean)
   let posts = []
@@ -526,6 +530,10 @@ async function reportsList() {
     list: reports.map(function (r) {
       return { id: r._id, postId: r.postId, reason: r.reason, createdAt: ts(r.createdAt), post: postMap[r.postId] || null }
     }),
+    total: total,
+    page: page,
+    pageSize: pageSize,
+    hasMore: page * pageSize < total,
   }
 }
 
@@ -635,8 +643,12 @@ async function setUserRole(openid, role) {
 }
 
 // ============ 反馈 ============
-async function feedbackList() {
-  const res = await db.collection('feedback').orderBy('createdAt', 'desc').limit(50).get()
+async function feedbackList(event) {
+  const page = Math.max(1, Number(event && event.page) || 1)
+  const pageSize = Math.min(50, Math.max(5, Number(event && event.pageSize) || 20))
+  const countRes = await db.collection('feedback').count()
+  const total = countRes.total || 0
+  const res = await db.collection('feedback').orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
   return {
     ok: true,
     list: (res.data || []).map(function (f) {
@@ -650,6 +662,10 @@ async function feedbackList() {
         ts: ts(f.createdAt),
       }
     }),
+    total: total,
+    page: page,
+    pageSize: pageSize,
+    hasMore: page * pageSize < total,
   }
 }
 
@@ -807,7 +823,7 @@ exports.main = async (event) => {
         if (res.ok) await audit('comments.remove', 'comment', event.commentId, '')
         break
       case 'reports.list':
-        res = await reportsList()
+        res = await reportsList(event)
         break
       case 'reports.dismiss':
         res = await dismissReport(event.id)
@@ -853,7 +869,7 @@ exports.main = async (event) => {
         if (res.ok) await audit('users.setRole', 'user', event.openid, event.role || '取消管理员')
         break
       case 'feedback.list':
-        res = await feedbackList()
+        res = await feedbackList(event)
         break
       case 'feedback.resolve':
         res = await feedbackResolve(event.id)

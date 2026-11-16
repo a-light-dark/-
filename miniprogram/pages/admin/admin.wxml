@@ -59,4 +59,5 @@
     </view>
   </block>
 
+  <view class="load-tip" wx:if="{{reports.length}}">{{loadingMore ? '加载中…' : (hasMore ? '上拉加载更多' : '没有更多了')}}</view>
 </view>

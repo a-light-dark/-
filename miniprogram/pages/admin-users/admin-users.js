@@ -11,6 +11,35 @@ Page({
     keyword: '',
     list: [],
     total: 0,
+    hasMore: false,
+    loadingMore: false,
+  },
+
+  onReachBottom() {
+    this.loadMore()
+  },
+
+  loadMore() {
+    if (!this.data.hasMore || this.data.loadingMore || this.data.loading) return
+    this.setData({ loadingMore: true })
+    const next = Math.floor(this.data.list.length / 20) + 1
+    api.adminUsersList(this.data.keyword, next)
+      .then((res) => {
+        const more = (res.list || []).map(function (u) {
+          u.uid = String(u.openid || '').slice(-6)
+          return u
+        })
+        this.setData({
+          list: this.data.list.concat(more),
+          total: res.total || 0,
+          hasMore: res.hasMore === true,
+          loadingMore: false,
+        })
+      })
+      .catch(() => {
+        this.setData({ loadingMore: false })
+        wx.showToast({ title: '没加载出来，再上拉一次', icon: 'none' })
+      })
   },
 
   onShow() {
@@ -40,7 +69,7 @@ Page({
             u.uid = String(u.openid || '').slice(-6)
             return u
           })
-          this.setData({ list: list, total: res.total || 0 })
+          this.setData({ list: list, total: res.total || 0, hasMore: res.hasMore === true })
         })
       })
       .catch((err) => {

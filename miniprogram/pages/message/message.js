@@ -1,13 +1,17 @@
-// pages/message/message.js —— 消息通知（评论 / 点赞 / 抢单）
+// pages/message/message.js —— 消息通知（评论 / 点赞 / 订单 / 系统），支持分类 tab 与分页
 const api = require('../../utils/api.js')
 const subscribe = require('../../utils/subscribe.js')
+
+const PAGE_SIZE = 20
 
 Page({
   data: {
     list: [],
-    allList: [],      // 原始列表，切分类 tab 时本地筛
     unread: 0,
+    total: 0,
+    hasMore: false,
     loading: true,
+    loadingMore: false,
     subscribeReady: false, // 后台配了订阅模板才显示「开启提醒」
     readingAll: false,     // 正在一键已读（防连点）
     typeTab: 'all',        // all / comment / like / order / system
@@ -25,17 +29,30 @@ Page({
     this.load()
   },
 
+  onPullDownRefresh() {
+    this.load()
+    setTimeout(() => wx.stopPullDownRefresh(), 600)
+  },
+
+  // 上拉加载更多
+  onReachBottom() {
+    this.loadMore()
+  },
+
   load() {
     this.setData({ loading: true })
     getApp().ready()
-      .then(() => api.fetchMessageCenter())
+      .then(() => api.fetchMessageCenter(1, this.data.typeTab))
       .then((res) => {
-        const all = res.list || []
-        const unread = res.unread || 0
-        this.setData({ allList: all, list: this.filterList(all), unread: unread, loading: false })
-        // 红点直接用同一次请求拿到的未读数，省掉一次云调用
-        if (unread > 0) {
-          wx.setTabBarBadge({ index: 3, text: unread > 99 ? '99+' : String(unread), fail: function () {} })
+        this.setData({
+          list: res.list || [],
+          unread: res.unread || 0,
+          total: res.total || 0,
+          hasMore: res.hasMore === true,
+          loading: false,
+        })
+        if (res.unread > 0) {
+          wx.setTabBarBadge({ index: 3, text: res.unread > 99 ? '99+' : String(res.unread), fail: function () {} })
         } else {
           wx.removeTabBarBadge({ index: 3, fail: function () {} })
         }
@@ -43,27 +60,36 @@ Page({
       .catch((err) => {
         console.error('读取消息失败', err)
         this.setData({ loading: false })
+        wx.showToast({ title: '消息没加载出来，下拉刷新试试', icon: 'none' })
       })
   },
 
-  // 按当前分类 tab 过滤（本地筛，不用再请求一次）
-  filterList(all, key) {
-    const t = key || this.data.typeTab || 'all'
-    if (!t || t === 'all') return all
-    return all.filter(function (n) { return n.type === t })
+  loadMore() {
+    if (!this.data.hasMore || this.data.loadingMore || this.data.loading) return
+    this.setData({ loadingMore: true })
+    const next = Math.floor(this.data.list.length / PAGE_SIZE) + 1
+    api.fetchMessageCenter(next, this.data.typeTab)
+      .then((res) => {
+        this.setData({
+          list: this.data.list.concat(res.list || []),
+          unread: res.unread || 0,
+          total: res.total || 0,
+          hasMore: res.hasMore === true,
+          loadingMore: false,
+        })
+      })
+      .catch(() => {
+        this.setData({ loadingMore: false })
+        wx.showToast({ title: '没加载出来，再上拉一次', icon: 'none' })
+      })
   },
 
-  // 切分类 tab
+  // 切分类 tab：交给服务端按 type 查（本地筛在分页时会漏数据）
   onTypeTap(e) {
     const key = e.currentTarget.dataset.key || 'all'
     if (key === this.data.typeTab) return
-    // setData 里 this.data 还没更新，筛选要显式把 key 传进去
-    this.setData({ typeTab: key, list: this.filterList(this.data.allList, key) })
-  },
-
-  onPullDownRefresh() {
+    this.setData({ typeTab: key, list: [], total: 0, hasMore: false })
     this.load()
-    setTimeout(() => wx.stopPullDownRefresh(), 600)
   },
 
   // 一键已读
@@ -76,9 +102,8 @@ Page({
     this.setData({ readingAll: true })
     api.markAllNoticesRead()
       .then(() => {
-        const all = this.data.allList.map((item) => Object.assign({}, item, { read: true }))
-        this.setData({ allList: all, list: this.filterList(all), unread: 0, readingAll: false })
-        api.refreshBadge()
+        const list = this.data.list.map((item) => Object.assign({}, item, { read: true }))
+        this.setData({ list: list, unread: 0, readingAll: false })
         wx.removeTabBarBadge({ index: 3, fail: function () {} })
         wx.showToast({ title: '已全部已读', icon: 'success' })
       })
@@ -134,17 +159,11 @@ Page({
   // 标为已读（点消息卡和长按菜单共用）
   markRead(notice) {
     if (!notice || notice.read) return
-    api.markNoticeRead(notice.id)
-      .then(() => api.refreshBadge())
-      .catch(() => null)
-    const all = this.data.allList.slice()
-    const at = all.findIndex(function (n) { return n.id === notice.id })
-    if (at > -1) all[at] = Object.assign({}, all[at], { read: true })
-    this.setData({
-      allList: all,
-      list: this.filterList(all),
-      unread: Math.max(0, this.data.unread - 1),
-    })
+    api.markNoticeRead(notice.id).catch(() => null)
+    const list = this.data.list.slice()
+    const at = list.findIndex(function (n) { return n.id === notice.id })
+    if (at > -1) list[at] = Object.assign({}, list[at], { read: true })
+    this.setData({ list: list, unread: Math.max(0, this.data.unread - 1) })
   },
 
   // 删除通知：确认后调云函数删除，再从本地列表移除
@@ -161,10 +180,9 @@ Page({
         api.deleteNotice(notice.id)
           .then(() => {
             wx.hideLoading()
-            const all = this.data.allList.filter(function (n) { return n.id !== notice.id })
+            const list = this.data.list.filter(function (n) { return n.id !== notice.id })
             const unread = notice.read ? this.data.unread : Math.max(0, this.data.unread - 1)
-            this.setData({ allList: all, list: this.filterList(all), unread: unread })
-            api.refreshBadge()
+            this.setData({ list: list, unread: unread, total: Math.max(0, this.data.total - 1) })
             wx.showToast({ title: '已删除', icon: 'success' })
           })
           .catch((err) => {

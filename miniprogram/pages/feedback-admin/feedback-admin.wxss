@@ -114,3 +114,10 @@
   text-align: center;
   line-height: 1.7;
 }
+
+.load-tip {
+  text-align: center;
+  font-size: 24rpx;
+  color: #b0b0b0;
+  padding: 24rpx 0 40rpx;
+}

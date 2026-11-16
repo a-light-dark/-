@@ -1,4 +1,4 @@
-// pages/admin/admin.js —— 举报处理（管理员页面）
+﻿// pages/admin/admin.js —— 举报处理（管理员页面）
 // 只有 openid 在白名单里的圈主能进；判断在云函数 adminReview 里做，前端只负责显示。
 
 const api = require('../../utils/api.js')
@@ -9,6 +9,35 @@ Page({
     checked: false,    // 是否已问过「是不是管理员」
     isAdmin: false,    // 是不是管理员
     reports: [],       // 举报列表
+    total: 0,
+    hasMore: false,
+    page: 1,
+    loadingMore: false,
+  },
+
+  // 上拉加载更多举报
+  onReachBottom() {
+    this.loadMore()
+  },
+
+  loadMore() {
+    if (!this.data.hasMore || this.data.loadingMore || this.data.loading) return
+    this.setData({ loadingMore: true })
+    const next = Math.floor(this.data.reports.length / 20) + 1
+    api.adminReportsList(next)
+      .then((res) => {
+        this.setData({
+          reports: this.data.reports.concat(res.list || []),
+          total: res.total || 0,
+          hasMore: res.hasMore === true,
+          page: next,
+          loadingMore: false,
+        })
+      })
+      .catch(() => {
+        this.setData({ loadingMore: false })
+        wx.showToast({ title: '没加载出来，再上拉一次', icon: 'none' })
+      })
   },
 
   onShow() {
@@ -33,7 +62,7 @@ Page({
       .then((isAdmin) => {
         this.setData({ checked: true, isAdmin: isAdmin })
         if (!isAdmin) return []
-        return api.adminReportsList().then((reports) => this.setData({ reports: reports }))
+        return api.adminReportsList(1).then((res) => this.setData({ reports: res.list || [], total: res.total || 0, hasMore: res.hasMore === true, page: 1 }))
       })
       .catch((err) => {
         console.error('读取举报失败', err)

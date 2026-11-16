@@ -38,4 +38,5 @@
   </block>
 
   <view class="foot">反馈来自「我的 → 建议反馈」，处理状态会同步给提交人。</view>
+  <view class="load-tip" wx:if="{{list.length}}">{{loadingMore ? '加载中…' : (hasMore ? '上拉加载更多' : '没有更多了')}}</view>
 </view>

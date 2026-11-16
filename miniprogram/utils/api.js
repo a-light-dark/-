@@ -1,4 +1,4 @@
-// utils/api.js —— 数据层
+﻿// utils/api.js —— 数据层
 // 页面只调用这里的函数：云开发可用时读写云数据库，不可用时自动退回本地演示数据
 const mock = require('./mock.js')
 const format = require('./format.js')
@@ -945,17 +945,21 @@ function fetchNotices(type) {
 }
 
 // 消息页首屏：一次云调用拿「列表 + 未读数」（notices 的 bundle 动作）
-function fetchMessageCenter() {
+function fetchMessageCenter(page, type) {
+  const pageNo = Math.max(1, Number(page) || 1)
   return run(function () {
-    return wx.cloud.callFunction({ name: 'notices', data: { action: 'bundle' } }).then(function (res) {
+    return wx.cloud.callFunction({ name: 'notices', data: { action: 'bundle', page: pageNo, type: type || 'all' } }).then(function (res) {
       const result = res.result || {}
       return {
         list: (result.list || []).map(normalizeNotice),
         unread: result.unread || 0,
+        total: result.total || 0,
+        page: result.page || pageNo,
+        hasMore: result.hasMore === true,
       }
     })
   }, function () {
-    return { list: [], unread: 0 }
+    return { list: [], unread: 0, total: 0, page: pageNo, hasMore: false }
   })
 }
 
@@ -1521,14 +1525,14 @@ function adminSetUserRole(openid, role) { return callAdmin('users.setRole', { op
 function adminAnnouncements() { return callAdmin('announcements.list') }
 
 // 举报列表走 adminApi（reports 集合是「所有用户不可读写」，客户端读不到，只能服务端代读）
-function adminReportsList() {
-  return callAdmin('reports.list').then(function (res) {
+function adminReportsList(page) {
+  return callAdmin('reports.list', { page: page || 1, pageSize: 20 }).then(function (res) {
     const rows = res.list || []
     const posts = rows.map(function (r) { return r.post }).filter(Boolean)
     return resolveImages(posts).then(function (withImg) {
       const byId = {}
       withImg.forEach(function (p) { byId[p.id] = p })
-      return rows.map(function (r) {
+      const list = rows.map(function (r) {
         const p = r.post ? (byId[r.post.id] || r.post) : null
         return {
           id: r.id,
@@ -1547,14 +1551,15 @@ function adminReportsList() {
           } : null,
         }
       })
+      return { list: list, total: res.total || 0, page: res.page || 1, hasMore: res.hasMore === true }
     })
   })
 }
 
 // 反馈列表同样走 adminApi（feedback 集合「所有用户不可读写」）
-function adminFeedbackList() {
-  return callAdmin('feedback.list').then(function (res) {
-    return (res.list || []).map(function (f) {
+function adminFeedbackList(page) {
+  return callAdmin('feedback.list', { page: page || 1, pageSize: 20 }).then(function (res) {
+    const list = (res.list || []).map(function (f) {
       return {
         id: f.id,
         content: f.content,
@@ -1567,6 +1572,7 @@ function adminFeedbackList() {
         time: format.relativeTime(f.ts),
       }
     })
+    return { list: list, total: res.total || 0, page: res.page || 1, hasMore: res.hasMore === true }
   })
 }
 function adminCreateAnnouncement(title, content, pinned) { return callAdmin('announcements.create', { title: title, content: content, pinned: !!pinned }) }

@@ -36,4 +36,5 @@
       <view class="empty-text">{{keyword ? '没搜到相关内容' : '还没有帖子'}}</view>
     </view>
   </block>
+  <view class="load-tip" wx:if="{{list.length}}">{{loadingMore ? '加载中…' : (hasMore ? '上拉加载更多' : '没有更多了')}}</view>
 </view>
