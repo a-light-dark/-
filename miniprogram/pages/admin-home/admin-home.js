@@ -17,6 +17,7 @@ Page({
       { key: 'posts', icon: '📄', name: '帖子管理', desc: '置顶 / 删除任意帖子', url: '/pages/admin-posts/admin-posts' },
       { key: 'announce', icon: '📢', name: '公告管理', desc: '发公告、置顶、下架', url: '/pages/admin-announce/admin-announce' },
       { key: 'settings', icon: '⚙️', name: '运营配置', desc: 'banner 文案、回复话术、审计日志', url: '/pages/admin-settings/admin-settings' },
+      { key: 'trash', icon: '🗑', name: '回收站', desc: '误删的帖子和评论可以恢复', url: '/pages/admin-trash/admin-trash' },
     ],
   },
 

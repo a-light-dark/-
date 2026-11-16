@@ -29,7 +29,8 @@
     "pages/admin-users/admin-users",
     "pages/admin-posts/admin-posts",
     "pages/admin-announce/admin-announce",
-    "pages/admin-settings/admin-settings"
+    "pages/admin-settings/admin-settings",
+    "pages/admin-trash/admin-trash"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

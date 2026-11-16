@@ -64,6 +64,13 @@ async function dashboard() {
     db.collection('posts').where({ createdAt: _.gte(new Date(new Date().setHours(0, 0, 0, 0))) }).count(),
     db.collection('comments').where({ createdAt: _.gte(new Date(new Date().setHours(0, 0, 0, 0))) }).count(),
   ])
+  let trashCount = 0
+  try {
+    const t = await db.collection('trash').count()
+    trashCount = t.total
+  } catch (err) {
+    console.warn('回收站计数失败（集合可能还没建）', err && err.errCode)
+  }
 
   // 最近 5 条举报 + 帖子信息
   const repRes = await db.collection('reports').orderBy('createdAt', 'desc').limit(5).get()
@@ -94,6 +101,7 @@ async function dashboard() {
       pendingFeedback: feedbackPending.total,
       todayPosts: todayPosts.total,
       todayComments: todayComments.total,
+      trashCount: trashCount,
       recentReports: reports.map(function (r) {
         return { id: r._id, reason: r.reason, createdAt: ts(r.createdAt), post: postMap[r.postId] || null }
       }),
@@ -147,16 +155,46 @@ async function setPostTop(postId, top) {
   return { ok: true }
 }
 
-// 删帖（跟 deletePost / adminReview 同款级联，收藏保留给「已被删除」占位）
+// 进回收站：删之前把原文档存一份，误删可恢复
+async function trashIt(type, docId, data) {
+  try {
+    await db.collection('trash').add({
+      data: {
+        type: type, // 'post' | 'comment'
+        docId: String(docId || ''),
+        data: data || {},
+        deletedAt: db.serverDate(),
+        deletedBy: cloud.getWXContext().OPENID,
+      },
+    })
+  } catch (err) {
+    console.warn('写入回收站失败', err && err.errCode, err && err.errMsg)
+  }
+}
+
+// 删帖（跟 deletePost / adminReview 同款级联，收藏保留给「已被删除」占位；帖子和评论先进回收站）
 async function removePost(postId) {
   if (!postId) return { ok: false, msg: '缺少帖子 id' }
+  let doc = null
   let images = []
   try {
-    const doc = await db.collection('posts').doc(postId).get()
+    doc = await db.collection('posts').doc(postId).get()
     images = (doc && doc.data && doc.data.images) || []
   } catch (err) {
-    console.warn('读取帖子图片失败（可能已删除）', postId)
+    console.warn('读取帖子失败（可能已删除）', postId)
   }
+  if (doc && doc.data) {
+    await trashIt('post', postId, doc.data)
+  }
+  let comments = { data: [] }
+  try {
+    comments = await db.collection('comments').where({ postId: postId }).get()
+  } catch (err) {
+    console.warn('读取帖子评论失败', postId)
+  }
+  ;(comments.data || []).forEach(function (c) {
+    trashIt('comment', c._id, c)
+  })
   try {
     await db.collection('posts').doc(postId).remove()
   } catch (err) {
@@ -216,9 +254,23 @@ async function removeComment(commentId) {
   const c = doc.data
   let removed = 1
   if (!c.parentId) {
-    const sub = await db.collection('comments').where({ parentId: commentId }).remove()
-    removed += (sub.stats && sub.stats.removed) || 0
+    let sub = { data: [] }
+    try {
+      sub = await db.collection('comments').where({ parentId: commentId }).get()
+    } catch (err) {
+      console.warn('读取子回复失败', err && err.errCode)
+    }
+    ;(sub.data || []).forEach(function (s) {
+      trashIt('comment', s._id, s)
+      removed += 1
+    })
+    try {
+      await db.collection('comments').where({ parentId: commentId }).remove()
+    } catch (err) {
+      console.warn('删除子回复失败', err && err.errCode)
+    }
   }
+  await trashIt('comment', commentId, c)
   await db.collection('comments').doc(commentId).remove()
   try {
     await db.collection('posts').doc(c.postId).update({ data: { commentCount: _.inc(-removed) } })
@@ -226,6 +278,82 @@ async function removeComment(commentId) {
     console.warn('回补评论数失败', err && err.errCode)
   }
   return { ok: true, removed: removed }
+}
+
+// ============ 回收站 ============
+async function trashList(event) {
+  const page = Math.max(1, Number(event.page) || 1)
+  const pageSize = Math.min(50, Math.max(1, Number(event.pageSize) || 20))
+  let countRes = { total: 0 }
+  let listRes = { data: [] }
+  try {
+    countRes = await db.collection('trash').count()
+    listRes = await db.collection('trash').orderBy('deletedAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
+  } catch (err) {
+    return { ok: false, msg: '回收站还没建（跑一次 setupCollections 就有了）' }
+  }
+  return {
+    ok: true,
+    list: (listRes.data || []).map(function (t) {
+      const d = t.data || {}
+      return {
+        id: t._id,
+        type: t.type,
+        docId: t.docId,
+        content: String(d.content || '').slice(0, 80),
+        nickname: d.nickname || '匿名同学',
+        deletedAt: ts(t.deletedAt),
+      }
+    }),
+    total: countRes.total,
+    hasMore: page * pageSize < countRes.total,
+  }
+}
+
+async function restoreTrash(id) {
+  if (!id) return { ok: false, msg: '缺少回收站记录 id' }
+  let doc
+  try {
+    doc = await db.collection('trash').doc(id).get()
+  } catch (err) {
+    return { ok: false, msg: '这条回收站记录不存在了' }
+  }
+  const entry = doc.data
+  const data = Object.assign({}, entry.data || {})
+  delete data._id
+  data._id = entry.docId
+  if (entry.type === 'post') {
+    try {
+      await db.collection('posts').add({ data: data })
+    } catch (err) {
+      return { ok: false, msg: '恢复失败（帖子 id 冲突或数据异常）' }
+    }
+  } else if (entry.type === 'comment') {
+    try {
+      await db.collection('comments').add({ data: data })
+    } catch (err) {
+      return { ok: false, msg: '恢复失败（评论 id 冲突或数据异常）' }
+    }
+    try {
+      await db.collection('posts').doc(data.postId).update({ data: { commentCount: _.inc(1) } })
+    } catch (err) {
+      console.warn('回补评论数失败', err && err.errCode)
+    }
+  } else {
+    return { ok: false, msg: '不认识这条回收站记录的类型' }
+  }
+  await db.collection('trash').doc(id).remove()
+  return { ok: true }
+}
+
+async function purgeTrash(id) {
+  if (!id) return { ok: false, msg: '缺少回收站记录 id' }
+  try {
+    await db.collection('trash').doc(id).remove()
+  } catch (err) {
+    return { ok: false, msg: '这条回收站记录不存在了' }
+  }
+  return { ok: true }
 }
 
 // ============ 举报处理 ============
@@ -550,6 +678,17 @@ exports.main = async (event) => {
         break
       case 'audit.list':
         res = await auditList(event)
+        break
+      case 'trash.list':
+        res = await trashList(event)
+        break
+      case 'trash.restore':
+        res = await restoreTrash(event.id)
+        if (res.ok) await audit('trash.restore', event.type || 'trash', event.id, '')
+        break
+      case 'trash.purge':
+        res = await purgeTrash(event.id)
+        if (res.ok) await audit('trash.purge', event.type || 'trash', event.id, '')
         break
       default:
         return { ok: false, msg: '不认识的操作：' + action }

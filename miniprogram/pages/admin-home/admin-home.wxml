@@ -46,6 +46,10 @@
           <view class="stat-num">{{dash.todayComments}}</view>
           <view class="stat-label">今日评论</view>
         </view>
+        <view class="stat-card">
+          <view class="stat-num">{{dash.trashCount}}</view>
+          <view class="stat-label">回收站</view>
+        </view>
       </view>
     </block>
 

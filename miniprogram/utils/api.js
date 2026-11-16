@@ -1510,6 +1510,9 @@ function adminRemoveAnnouncement(id) { return callAdmin('announcements.remove', 
 function adminSettings() { return callAdmin('settings.get') }
 function adminSetSetting(key, value) { return callAdmin('settings.set', { key: key, value: value }) }
 function adminAuditList(page) { return callAdmin('audit.list', { page: page || 1, pageSize: 20 }) }
+function adminTrashList(page) { return callAdmin('trash.list', { page: page || 1, pageSize: 20 }) }
+function adminTrashRestore(id) { return callAdmin('trash.restore', { id: id }) }
+function adminTrashPurge(id) { return callAdmin('trash.purge', { id: id }) }
 
 /* ================= 话题关注 ================= */
 
@@ -1714,4 +1717,7 @@ module.exports = {
   adminSettings: adminSettings,
   adminSetSetting: adminSetSetting,
   adminAuditList: adminAuditList,
+  adminTrashList: adminTrashList,
+  adminTrashRestore: adminTrashRestore,
+  adminTrashPurge: adminTrashPurge,
 }
