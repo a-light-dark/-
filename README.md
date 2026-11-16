@@ -80,14 +80,14 @@ campus-forum/
 │       ├── account/         # 注销账号
 │       ├── feedback/        # 建议反馈（提交 + 我的记录）
 │       └── feedback-admin/  # 反馈管理（圈主）
-├── cloudfunctions/          # 云函数（18 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / viewPost / adminReview / feedback / setupCollections）
+├── cloudfunctions/          # 云函数（19 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / viewPost / adminReview / feedback / adminApi / setupCollections）
 └── tools/check.js           # 自检脚本
 ```
 
 ## 云开发配置（当前环境）
 
 - 环境 ID：`cloud1-d6g26wz61eca836b8`（已写进 `miniprogram/app.js` 的 `CLOUD_ENV`）
-- 云开发控制台 → 数据库 → 需要 11 个集合，读写权限按下面的表格来（`posts` / `users` / `comments` / `likes` / `orders` 用**自定义安全规则** `{"read": true, "write": false}` 只开放读；微信预设里的「所有用户可读」其实还带着创建者可写，别用）：
+- 云开发控制台 → 数据库 → 需要 15 个集合，读写权限按下面的表格来（`posts` / `users` / `comments` / `likes` / `orders` 用**自定义安全规则** `{"read": true, "write": false}` 只开放读；微信预设里的「所有用户可读」其实还带着创建者可写，别用）：
 
 | 集合 | 存什么 | 权限 |
 |---|---|---|
@@ -102,10 +102,14 @@ campus-forum/
 | `notices` | 消息通知（toOpenid/type/text/postId/read） | 所有用户不可读写 |
 | `feedback` | 建议反馈（content/contact/nickname/avatar/status 待处理·已处理） | 所有用户不可读写 |
 | `reviews` | 订单评价（orderId/fromOpenid/toOpenid/score/text） | 所有用户不可读写 |
+| `announcements` | 公告（title/content/pinned/active，圈主后台发布） | 所有用户不可读写 |
+| `bans` | 封禁记录（openid/reason，圈主后台操作） | 所有用户不可读写 |
+| `settings` | 运营配置（banner 文案等键值对，圈主后台改） | 所有用户不可读写 |
+| `audit_logs` | 管理员操作日志（action/targetType/targetId） | 所有用户不可读写 |
 
-> `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` 是后加的，不用手动建：调用一次 `setupCollections` 云函数就会建好（在开发者工具里给云函数发个空参数即可，已存在会跳过）。
+> `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` 是后加的，不用手动建：调用一次 `setupCollections` 云函数就会建好（在开发者工具里给云函数发个空参数即可，已存在会跳过）。
 
-- 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（18 个都要）
+- 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（19 个都要）
 - 云存储：头像存 `avatars/<openid>/时间戳.png`，帖子图存 `posts/<openid>/时间戳-随机数.png`；云开发控制台 → 存储 里能看到（免费额度够用）
 - ⚠️ **云存储权限必须是「所有用户可读，仅创建者可读写」**（控制台 → 存储 → 权限设置）。如果不是，别人帖子的图片会显示 `STORAGE_EXCEED_AUTHORITY` 加载不出来。列表里的图片客户端会先用 `getTempFileURL` 换成临时 https 链接再显示，真机上更稳
 - 发帖图片：客户端先压到 quality 70 再上传；云函数校验「必须是自己传到 `posts/<openid>/` 下的文件」，并逐张做图片内容检测（同步接口单张上限 750KB）
@@ -163,6 +167,16 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 - 删帖后首页会标脏刷新（`globalData.postsDirty`），返回首页看不到这条了
 
 > 测试可以用 `setupCollections` 塞一条别人的帖子和举报：传 `{ seedPost: '内容' }` 拿 `seedPostId`，再传 `{ seedReport: { postId, reason } }`；收尾传 `{ removePostId }`。
+
+## 管理后台（进行中，M1 后端已上线）
+
+完整设计见 `admin/DESIGN.md`（参考了 GitHub 开源校园社区的后台设计，两阶段：小程序内管理台 → 换公司主体后的 Web 后台）。
+
+- 后端统一走一个网关云函数 `adminApi`：所有管理动作都过「管理员白名单」校验（白名单第一人是圈主 owner），每次操作自动写 `audit_logs` 审计日志。
+- 现在已能通过 `adminApi` 做的：仪表盘统计（帖子/评论/订单/用户/待处理举报）、帖子列表/置顶/删除、评论列表/删除、举报列表/忽略/删帖、用户列表/**封禁/解封**/设角色、反馈处理、公告增删改、运营配置（banner 文案等键值）、审计日志查询。
+- 封禁会在 5 个写入口生效：发帖 `createPost`、评论 `addComment`、发悬赏 `createOrder`、抢单/标记完成 `grabOrder`、点赞 `likePost` —— 被封用户操作时返回「你的账号已被圈主限制」。
+- 新增 4 个集合：`announcements` / `bans` / `settings` / `audit_logs`（`setupCollections` 会自动建）。
+- 下一步 M2：小程序内「管理台」页面群（仪表盘 / 举报处理 / 用户管理 / 公告配置），把 adminApi 的动作接到界面上。
 
 ## 建议反馈（用户提想法 / 圈主处理）
 

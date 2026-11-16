@@ -64,6 +64,14 @@ exports.main = async (event) => {
   if (!postId || !content) return { ok: false, msg: '参数不完整' }
   if (content.length > 300) return { ok: false, msg: '评论太长啦，300 字以内' }
 
+  // 封禁检查：被圈主封禁的用户不能评论
+  try {
+    const me = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
+    if (me.data && me.data[0] && me.data[0].banned) {
+      return { ok: false, msg: '你的账号已被圈主限制，暂时不能评论' }
+    }
+  } catch (err) { /* 查不到就放行 */ }
+
   // 楼中楼：parentId 是「根评论」的 id（一层回复，不再往下嵌套）
   let rootId = ''
   let replyTo = ''

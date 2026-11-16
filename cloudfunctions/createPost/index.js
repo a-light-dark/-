@@ -80,6 +80,15 @@ exports.main = async (event) => {
   if (content.length > 1000) return { ok: false, msg: '内容太长啦，1000 字以内' }
   if (images.length > 9) return { ok: false, msg: '图片最多 9 张' }
 
+  // 封禁检查：被圈主封禁的用户不能发帖（users.banned 由 adminApi 维护）
+  try {
+    const me = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
+    if (me.data && me.data[0] && me.data[0].banned) {
+      const reason = me.data[0].banReason || ''
+      return { ok: false, msg: '你的账号已被圈主限制' + (reason ? '（' + reason + '）' : '') + '，暂时不能发帖' }
+    }
+  } catch (err) { /* 查不到就放行 */ }
+
   // 只认「自己上传到 posts/<openid>/ 下」的 fileID，防止冒用别人的文件
   const ownPrefix = 'posts/' + OPENID + '/'
   for (let i = 0; i < images.length; i++) {

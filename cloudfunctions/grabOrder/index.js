@@ -119,6 +119,14 @@ exports.main = async (event) => {
     return getOrder(orderId)
   }
 
+  // 封禁检查：被圈主封禁的用户不能抢单/标记完成/确认（get 查询不拦）
+  try {
+    const me = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
+    if (me.data && me.data[0] && me.data[0].banned) {
+      return { ok: false, msg: '你的账号已被圈主限制，暂时不能操作订单' }
+    }
+  } catch (err) { /* 查不到就放行 */ }
+
   const orders = db.collection('orders')
   const doc = await orders.doc(orderId).get().catch(() => null)
   if (!doc || !doc.data) return { ok: false, msg: '订单不存在或已删除' }

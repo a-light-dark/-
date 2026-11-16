@@ -1,0 +1,9 @@
+{
+  "name": "adminApi",
+  "version": "1.0.0",
+  "description": "校园圈管理后台网关",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

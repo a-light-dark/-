@@ -30,6 +30,14 @@ exports.main = async (event) => {
   if (content.length > 200) return { ok: false, msg: '描述太长啦，200 字以内' }
   if (!amount || amount <= 0 || amount > 1000) return { ok: false, msg: '金额要在 0.01 - 1000 元之间' }
 
+  // 封禁检查：被圈主封禁的用户不能发悬赏
+  try {
+    const me = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
+    if (me.data && me.data[0] && me.data[0].banned) {
+      return { ok: false, msg: '你的账号已被圈主限制，暂时不能发悬赏' }
+    }
+  } catch (err) { /* 查不到就放行 */ }
+
   let nickname = '同学' + String(OPENID).slice(-4)
   let avatar = '😀'
   try {

@@ -44,6 +44,14 @@ exports.main = async (event) => {
   const postId = String(event.postId || '')
   if (!postId) return { liked: false, likeCount: 0, msg: '缺少 postId' }
 
+  // 封禁检查：被圈主封禁的用户不能点赞（users.banned 由 adminApi 维护）
+  try {
+    const me = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
+    if (me.data && me.data[0] && me.data[0].banned) {
+      return { liked: false, likeCount: 0, msg: '你的账号已被限制，暂时不能点赞' }
+    }
+  } catch (err) { /* 查不到就放行，不因查询失败挡住正常用户 */ }
+
   const likes = db.collection('likes')
   const posts = db.collection('posts')
 
