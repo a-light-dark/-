@@ -160,6 +160,34 @@
   margin-top: 10rpx;
 }
 
+/* 圈主发的公告（绿色小卡，点开看全文） */
+.announce-card {
+  margin: 20rpx 24rpx 0;
+  padding: 24rpx 28rpx;
+  border-radius: 16rpx;
+  background: #e8f9ee;
+  border: 2rpx solid #bfeccf;
+  display: flex;
+  align-items: flex-start;
+}
+.announce-icon { font-size: 32rpx; margin-right: 16rpx; margin-top: 2rpx; }
+.announce-body { flex: 1; min-width: 0; }
+.announce-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #057748;
+}
+.announce-content {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #2e7d53;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 /* 热门话题运营位（横向滚动小卡） */
 .topic-strip {
   white-space: nowrap;

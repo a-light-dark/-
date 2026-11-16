@@ -1,0 +1,9 @@
+{
+  "name": "siteData",
+  "version": "1.0.0",
+  "description": "公开数据网关：公告 + 首页 banner 文案",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

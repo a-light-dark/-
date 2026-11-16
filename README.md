@@ -88,7 +88,7 @@ campus-forum/
 │       ├── account/         # 注销账号
 │       ├── feedback/        # 建议反馈（提交 + 我的记录）
 │       └── feedback-admin/  # 反馈管理（圈主）
-├── cloudfunctions/          # 云函数（19 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / viewPost / adminReview / feedback / adminApi / setupCollections）
+├── cloudfunctions/          # 云函数（20 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / siteData / viewPost / adminReview / feedback / adminApi / setupCollections）
 └── tools/check.js           # 自检脚本
 ```
 
@@ -120,7 +120,7 @@ campus-forum/
 
 > `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` / `trash` / `wordfilters` / `backups` 是后加的，不用手动建：调用一次 `setupCollections` 云函数就会建好（在开发者工具里给云函数发个空参数即可，已存在会跳过）。
 
-- 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（19 个都要）
+- 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（20 个都要）
 - 云存储：头像存 `avatars/<openid>/时间戳.png`，帖子图存 `posts/<openid>/时间戳-随机数.png`；云开发控制台 → 存储 里能看到（免费额度够用）
 - ⚠️ **云存储权限必须是「所有用户可读，仅创建者可读写」**（控制台 → 存储 → 权限设置）。如果不是，别人帖子的图片会显示 `STORAGE_EXCEED_AUTHORITY` 加载不出来。列表里的图片客户端会先用 `getTempFileURL` 换成临时 https 链接再显示，真机上更稳
 - 发帖图片：客户端先压到 quality 70 再上传；云函数校验「必须是自己传到 `posts/<openid>/` 下的文件」，并逐张做图片内容检测（同步接口单张上限 750KB）
@@ -188,6 +188,7 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 - 封禁会在 5 个写入口生效：发帖 `createPost`、评论 `addComment`、发悬赏 `createOrder`、抢单/标记完成 `grabOrder`、点赞 `likePost` —— 被封用户操作时返回「你的账号已被圈主限制」。
 - 新增 7 个集合：`announcements` / `bans` / `settings` / `audit_logs` / `trash` / `wordfilters` / `backups`（`setupCollections` 会自动建）。
 - M2 已上线：小程序内「管理台」页面群——「我的」页（圈主可见）多出「管理台」入口，进去是仪表盘 + 9 个功能（举报处理 / 反馈管理 / 用户管理 / 帖子管理 / 公告管理 / 运营配置 / 回收站 / 敏感词库 / 数据备份），全部接在 `adminApi` 上。
+- 公告已面向用户：圈主在「公告管理」发的公告（含置顶），会经 `siteData` 云函数在**首页**显示成绿色公告卡（最多 3 条，点开看全文）；「运营配置」里的 banner 文案会替换首页紫色 banner 的标题。
 - M4 回收站已上线：管理端删掉的帖子和评论会先存 `trash` 集合，回收站里可「恢复」或「彻底删除」；恢复的帖子不带回它原来的点赞/评论/图片（那些删的时候就清掉了）。
 - M4 敏感词库已上线：圈主在「敏感词库」里加的词，会先于微信审核在发帖/评论/发悬赏时本地拦截（上限 200 个、每个 20 字以内）；微信 msgSecCheck 继续兜底。
 - M4 数据备份已上线：圈主在「数据备份」里一键把 17 个集合导出成 JSON 存到云存储（超过 8MB 会拒绝），可复制下载链接保存到电脑/网盘，也能删除旧备份。建议每周备份一次。

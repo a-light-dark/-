@@ -394,8 +394,22 @@ function topicMeta(name) {
 }
 
 // 热门话题：统计最近 200 条帖子的标签，按出现次数排。首页顶部「运营位」用。
-function fetchHotTopics(limit) {
-  const n = limit || 6
+// 首页公开数据：公告 + banner 文案（由 siteData 云函数代读，普通用户读不到那两个集合）
+function fetchSiteData() {
+  if (!cloudReady()) {
+    return Promise.resolve({ ok: true, announcements: [], bannerText: '' })
+  }
+  return wx.cloud
+    .callFunction({ name: 'siteData', data: {} })
+    .then(function (r) {
+      return r && r.result ? r.result : { ok: true, announcements: [], bannerText: '' }
+    })
+    .catch(function () {
+      return { ok: true, announcements: [], bannerText: '' }
+    })
+}
+
+function fetchHotTopics(limit) {  const n = limit || 6
   function countFrom(posts) {
     const map = {}
     posts.forEach(function (p) {
@@ -1655,6 +1669,7 @@ module.exports = {
   fetchHotPost: fetchHotPost,
   incView: incView,
   fetchWeeklyHot: fetchWeeklyHot,
+  fetchSiteData: fetchSiteData,
   fetchHotTopics: fetchHotTopics,
   fetchActiveUsers: fetchActiveUsers,
   TOPIC_LIST: TOPIC_LIST,

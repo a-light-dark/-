@@ -30,6 +30,8 @@ Page({
     hotPost: null,
     hotIsToday: false, // 热榜是不是「今天」的帖子
     hotTopics: [],     // 热门话题运营位（按最近帖子标签计数）
+    announcements: [], // 圈主发的公告（siteData 代读）
+    bannerText: '',    // 圈主在运营配置里设的 banner 文案
     loading: false,
     hasMore: true,
     offline: false, // true = 正在用本地演示数据
@@ -41,10 +43,26 @@ Page({
     this.loadFirst()
     this.loadHot()
     this.loadHotTopics()
+    this.loadSiteData()
     // 没同意过隐私政策就先弹提示（同意后不再打扰）
     if (!wx.getStorageSync('privacyAgreed')) {
       this.setData({ privacyVisible: true })
     }
+  },
+
+  // 公告 + banner 文案（圈主在管理台发的）
+  loadSiteData() {
+    api.fetchSiteData().then((res) => {
+      const list = (res.announcements || []).slice(0, 3)
+      this.setData({ announcements: list, bannerText: res.bannerText || '' })
+    }).catch(() => {})
+  },
+
+  // 点公告看全文
+  onAnnounceTap(e) {
+    const title = e.currentTarget.dataset.title
+    const content = e.currentTarget.dataset.content
+    wx.showModal({ title: '📢 ' + title, content: content, showCancel: false, confirmText: '知道了' })
   },
 
   // 每个 tab / 分类入口 / 排序组合一份缓存，20 秒内切回来直接用，不再白屏重拉

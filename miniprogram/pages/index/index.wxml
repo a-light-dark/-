@@ -40,10 +40,20 @@
     <text class="hot-more" catchtap="goBoard">🏆 榜单 ›</text>
   </view>
 
-  <!-- 公告 -->
+  <!-- 公告 banner（圈主可在运营配置里改文案） -->
   <view class="banner">
-    <view class="banner-title">🎉 校园圈体验版上线啦</view>
+    <view class="banner-title">{{bannerText ? bannerText : '🎉 校园圈体验版上线啦'}}</view>
     <view class="banner-desc">欢迎发帖分享校园生活，有问题点「我的 → 建议反馈」。</view>
+  </view>
+
+  <!-- 圈主发的公告（管理台 → 公告管理） -->
+  <view class="announce-card" wx:for="{{announcements}}" wx:key="id"
+        data-title="{{item.title}}" data-content="{{item.content}}" bindtap="onAnnounceTap">
+    <text class="announce-icon">📢</text>
+    <view class="announce-body">
+      <view class="announce-title">{{item.pinned ? '【置顶】' : ''}}{{item.title}}</view>
+      <view class="announce-content">{{item.content}}</view>
+    </view>
   </view>
 
   <!-- 热门话题运营位：按最近帖子的话题计数，点进去就是话题页 -->
