@@ -1,0 +1,48 @@
+<view class="page">
+  <view wx:if="{{checked && !isAdmin}}" class="empty">
+    <view class="empty-icon">🔒</view>
+    <view class="empty-text">这个页面只有圈主能看</view>
+  </view>
+
+  <block wx:if="{{checked && isAdmin}}">
+    <!-- 搜索 -->
+    <view class="search-bar">
+      <input class="search-input" placeholder="按昵称搜索用户" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="doSearch" />
+      <view class="search-btn" bindtap="doSearch">搜索</view>
+      <view wx:if="{{keyword}}" class="search-clear" bindtap="clearSearch">✕</view>
+    </view>
+
+    <view class="list-head">
+      <text>共 {{total}} 位同学</text>
+      <text class="list-hint">点名字进他的主页</text>
+    </view>
+
+    <view wx:if="{{loading}}" class="loading-tip">加载中…</view>
+
+    <view wx:for="{{list}}" wx:key="openid" class="user-card">
+      <view class="user-main" data-openid="{{item.openid}}" bindtap="goUser">
+        <view class="user-nick">
+          {{item.nickname}}
+          <text wx:if="{{item.banned}}" class="badge banned">已封禁</text>
+          <text wx:if="{{item.role === 'admin'}}" class="badge admin">管理员</text>
+        </view>
+        <view class="user-sub">
+          <text>uid {{item.uid}}</text>
+          <text wx:if="{{item.banned && item.banReason}}"> · 封禁原因：{{item.banReason}}</text>
+        </view>
+      </view>
+      <view class="user-ops">
+        <view wx:if="{{item.banned}}" class="op-btn ok" data-openid="{{item.openid}}" data-nick="{{item.nickname}}" bindtap="onUnban">解封</view>
+        <view wx:else class="op-btn danger" data-openid="{{item.openid}}" data-nick="{{item.nickname}}" bindtap="onBan">封禁</view>
+        <view wx:if="{{isOwner}}" class="op-btn role" data-openid="{{item.openid}}" data-nick="{{item.nickname}}" data-role="{{item.role}}" bindtap="onToggleRole">
+          {{item.role === 'admin' ? '取消管理员' : '设管理员'}}
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{!loading && !list.length}}" class="empty">
+      <view class="empty-icon">👀</view>
+      <view class="empty-text">{{keyword ? '没搜到这个名字的同学' : '还没有用户'}}</view>
+    </view>
+  </block>
+</view>

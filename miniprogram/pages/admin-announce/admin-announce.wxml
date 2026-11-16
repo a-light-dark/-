@@ -1,0 +1,48 @@
+<view class="page">
+  <view wx:if="{{checked && !isAdmin}}" class="empty">
+    <view class="empty-icon">🔒</view>
+    <view class="empty-text">这个页面只有圈主能看</view>
+  </view>
+
+  <block wx:if="{{checked && isAdmin}}">
+    <view class="fab" bindtap="openComposer">＋ 发公告</view>
+
+    <view wx:if="{{loading}}" class="loading-tip">加载中…</view>
+
+    <view wx:for="{{list}}" wx:key="id" class="ann-card">
+      <view class="ann-top">
+        <text class="ann-title">{{item.title}}</text>
+        <text wx:if="{{item.pinned}}" class="badge pin">置顶</text>
+        <text wx:if="{{!item.active}}" class="badge off">已下架</text>
+      </view>
+      <view class="ann-content">{{item.content}}</view>
+      <view class="ann-ops">
+        <view class="op-btn" data-id="{{item.id}}" data-pinned="{{item.pinned}}" data-title="{{item.title}}" data-content="{{item.content}}" bindtap="onPin">{{item.pinned ? '取消置顶' : '置顶'}}</view>
+        <view class="op-btn" data-id="{{item.id}}" data-active="{{item.active}}" data-title="{{item.title}}" data-content="{{item.content}}" bindtap="onToggleActive">{{item.active ? '下架' : '上架'}}</view>
+        <view class="op-btn danger" data-id="{{item.id}}" bindtap="onDelete">删除</view>
+      </view>
+    </view>
+
+    <view wx:if="{{!loading && !list.length}}" class="empty">
+      <view class="empty-icon">📢</view>
+      <view class="empty-text">还没有公告，点「发公告」写第一条</view>
+    </view>
+
+    <!-- 新建公告面板 -->
+    <view wx:if="{{composing}}" class="compose-mask" bindtap="closeComposer">
+      <view class="compose-sheet" catchtap="noop">
+        <view class="compose-title">发公告</view>
+        <input class="compose-input" placeholder="标题（50 字内）" maxlength="50" bindinput="onTitleInput" />
+        <textarea class="compose-textarea" placeholder="内容（500 字内，会显示在首页公告位）" maxlength="500" bindinput="onContentInput" />
+        <view class="compose-pin">
+          <text>📌 置顶这条公告</text>
+          <switch checked="{{pinned}}" bindchange="onPinnedToggle" color="#07c160" />
+        </view>
+        <view class="compose-actions">
+          <view class="btn ghost" bindtap="closeComposer">取消</view>
+          <view class="btn primary {{saving ? 'disabled' : ''}}" bindtap="save">{{saving ? '发布中…' : '发布'}}</view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

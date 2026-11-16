@@ -1,0 +1,75 @@
+<view class="page">
+  <!-- 没权限 -->
+  <view wx:if="{{checked && !isAdmin}}" class="empty">
+    <view class="empty-icon">🔒</view>
+    <view class="empty-text">这个页面只有圈主能看</view>
+  </view>
+
+  <!-- 仪表盘 -->
+  <block wx:if="{{checked && isAdmin}}">
+    <view wx:if="{{loading && !dash}}" class="loading-tip">加载中…</view>
+
+    <block wx:if="{{dash}}">
+      <view class="stat-grid">
+        <view class="stat-card">
+          <view class="stat-num">{{dash.posts}}</view>
+          <view class="stat-label">帖子</view>
+        </view>
+        <view class="stat-card">
+          <view class="stat-num">{{dash.comments}}</view>
+          <view class="stat-label">评论</view>
+        </view>
+        <view class="stat-card">
+          <view class="stat-num">{{dash.orders}}</view>
+          <view class="stat-label">订单</view>
+        </view>
+        <view class="stat-card">
+          <view class="stat-num">{{dash.users}}</view>
+          <view class="stat-label">用户</view>
+        </view>
+      </view>
+
+      <view class="stat-grid second">
+        <view class="stat-card warn">
+          <view class="stat-num">{{dash.pendingReports}}</view>
+          <view class="stat-label">待处理举报</view>
+        </view>
+        <view class="stat-card warn">
+          <view class="stat-num">{{dash.pendingFeedback}}</view>
+          <view class="stat-label">待处理反馈</view>
+        </view>
+        <view class="stat-card">
+          <view class="stat-num">{{dash.todayPosts}}</view>
+          <view class="stat-label">今日新帖</view>
+        </view>
+        <view class="stat-card">
+          <view class="stat-num">{{dash.todayComments}}</view>
+          <view class="stat-label">今日评论</view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 最近举报 -->
+    <view wx:if="{{dash && dash.recentReports.length}}" class="card section">
+      <view class="section-title">最近举报</view>
+      <view wx:for="{{dash.recentReports}}" wx:key="id" class="rep-row" bindtap="goReports">
+        <view class="rep-main">
+          <view class="rep-reason">【{{item.reason}}】</view>
+          <view class="rep-text">{{item.post ? item.post.content : '帖子已经被删除了'}}</view>
+          <view class="rep-meta">{{item.post ? item.post.nickname : ''}}</view>
+        </view>
+        <view class="rep-arrow">›</view>
+      </view>
+      <view class="section-more" bindtap="goReports">全部举报 ›</view>
+    </view>
+
+    <!-- 功能入口 -->
+    <view class="nav-grid">
+      <view wx:for="{{navs}}" wx:key="key" class="nav-card" data-url="{{item.url}}" bindtap="goNav">
+        <view class="nav-icon">{{item.icon}}</view>
+        <view class="nav-name">{{item.name}}</view>
+        <view class="nav-desc">{{item.desc}}</view>
+      </view>
+    </view>
+  </block>
+</view>

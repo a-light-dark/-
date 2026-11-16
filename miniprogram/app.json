@@ -24,7 +24,12 @@
     "pages/user/user",
     "pages/review/review",
     "pages/guide/guide",
-    "pages/support/support"
+    "pages/support/support",
+    "pages/admin-home/admin-home",
+    "pages/admin-users/admin-users",
+    "pages/admin-posts/admin-posts",
+    "pages/admin-announce/admin-announce",
+    "pages/admin-settings/admin-settings"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

@@ -1,0 +1,138 @@
+.page {
+  padding: 24rpx;
+  padding-bottom: 60rpx;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 40rpx;
+  padding: 8rpx 12rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.search-input {
+  flex: 1;
+  height: 64rpx;
+  font-size: 28rpx;
+  padding-left: 20rpx;
+}
+
+.search-btn {
+  color: #07c160;
+  font-size: 28rpx;
+  padding: 0 24rpx;
+}
+
+.search-clear {
+  color: #bbb;
+  font-size: 30rpx;
+  padding: 0 12rpx;
+}
+
+.list-head {
+  font-size: 24rpx;
+  color: #999;
+  margin: 24rpx 8rpx 12rpx;
+}
+
+.loading-tip {
+  color: #999;
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.post-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.post-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.post-head {
+  display: flex;
+  align-items: center;
+}
+
+.post-nick {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.badge {
+  font-size: 20rpx;
+  border-radius: 8rpx;
+  padding: 2rpx 10rpx;
+  margin-left: 12rpx;
+  background: #f0f0f0;
+  color: #888;
+}
+
+.badge.top {
+  background: #fff4d6;
+  color: #b8860b;
+}
+
+.post-content {
+  font-size: 28rpx;
+  color: #333;
+  margin-top: 10rpx;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.post-meta {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 10rpx;
+}
+
+.post-ops {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: 16rpx;
+}
+
+.op-btn {
+  font-size: 24rpx;
+  border-radius: 30rpx;
+  padding: 10rpx 24rpx;
+  margin-top: 8rpx;
+  border: 1rpx solid #b7e6c9;
+  color: #07a35a;
+  background: #fff;
+}
+
+.op-btn.danger {
+  border-color: #f3c5c5;
+  color: #e64340;
+}
+
+.empty {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+}
+
+.empty-text {
+  color: #999;
+  font-size: 28rpx;
+  margin-top: 20rpx;
+}

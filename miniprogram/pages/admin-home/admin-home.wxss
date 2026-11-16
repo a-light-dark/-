@@ -1,0 +1,165 @@
+.page {
+  padding: 24rpx;
+}
+
+.loading-tip {
+  color: #999;
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+/* 统计卡 */
+.stat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -8rpx;
+}
+
+.stat-grid.second {
+  margin-top: 16rpx;
+}
+
+.stat-card {
+  width: calc(25% - 16rpx);
+  margin: 0 8rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 20rpx 0;
+  text-align: center;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.stat-card.warn {
+  background: #fff8f0;
+}
+
+.stat-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #07c160;
+}
+
+.stat-card.warn .stat-num {
+  color: #e6a23c;
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 6rpx;
+}
+
+/* 分区 */
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.section {
+  margin-top: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12rpx;
+}
+
+.rep-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f2f2f2;
+}
+
+.rep-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.rep-reason {
+  font-size: 24rpx;
+  color: #e6a23c;
+}
+
+.rep-text {
+  font-size: 26rpx;
+  color: #333;
+  margin-top: 4rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rep-meta {
+  font-size: 22rpx;
+  color: #bbb;
+  margin-top: 4rpx;
+}
+
+.rep-arrow {
+  color: #ccc;
+  font-size: 40rpx;
+  margin-left: 16rpx;
+}
+
+.section-more {
+  text-align: center;
+  color: #07c160;
+  font-size: 26rpx;
+  padding-top: 16rpx;
+}
+
+/* 入口卡 */
+.nav-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 24rpx -8rpx 40rpx;
+}
+
+.nav-card {
+  width: calc(50% - 16rpx);
+  margin: 8rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-sizing: border-box;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.nav-icon {
+  font-size: 44rpx;
+}
+
+.nav-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-top: 8rpx;
+}
+
+.nav-desc {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 6rpx;
+  line-height: 1.5;
+}
+
+/* 无权限 */
+.empty {
+  text-align: center;
+  padding: 160rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+}
+
+.empty-text {
+  color: #999;
+  font-size: 28rpx;
+  margin-top: 20rpx;
+}

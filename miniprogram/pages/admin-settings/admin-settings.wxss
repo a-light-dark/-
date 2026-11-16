@@ -1,0 +1,117 @@
+.page {
+  padding: 24rpx;
+  padding-bottom: 60rpx;
+}
+
+.loading-tip {
+  color: #999;
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.section-title {
+  font-size: 26rpx;
+  color: #999;
+  margin: 24rpx 8rpx 12rpx;
+}
+
+.set-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.set-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.set-desc {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 6rpx;
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+}
+
+.set-input {
+  flex: 1;
+  height: 72rpx;
+  background: #f6f6f6;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+}
+
+.set-save {
+  color: #07c160;
+  font-size: 28rpx;
+  font-weight: 600;
+  padding: 0 12rpx 0 24rpx;
+}
+
+.set-save.busy {
+  color: #bbb;
+}
+
+.audit-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 8rpx 24rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.audit-row {
+  display: flex;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f2f2;
+}
+
+.audit-action {
+  font-size: 26rpx;
+  color: #333;
+  width: 260rpx;
+}
+
+.audit-target {
+  font-size: 24rpx;
+  color: #999;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.audit-total {
+  text-align: center;
+  color: #bbb;
+  font-size: 22rpx;
+  padding: 16rpx 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.empty.small {
+  padding: 40rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+}
+
+.empty-text {
+  color: #999;
+  font-size: 28rpx;
+  margin-top: 20rpx;
+}

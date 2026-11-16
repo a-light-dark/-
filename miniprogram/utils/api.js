@@ -1470,6 +1470,47 @@ function dismissReport(reportId) {
   })
 }
 
+/* ================= 管理后台网关（adminApi） ================= */
+
+// 统一调 adminApi：失败抛 err.message，页面直接 toast
+function callAdmin(action, data) {
+  return run(function () {
+    return wx.cloud.callFunction({ name: 'adminApi', data: Object.assign({ action: action }, data || {}) }).then(function (res) {
+      const result = res.result || {}
+      if (!result.ok) throw new Error(result.msg || '操作失败')
+      return result
+    })
+  }, function () {
+    throw new Error('云开发没连上，管理功能用不了')
+  })
+}
+
+function adminWhoAmI() {
+  return run(function () {
+    return wx.cloud.callFunction({ name: 'adminApi', data: { action: 'isAdmin' } }).then(function (res) {
+      return res.result || { ok: false, admin: false, owner: false }
+    })
+  }, function () {
+    return { ok: false, admin: false, owner: false }
+  })
+}
+
+function adminDashboard() { return callAdmin('dashboard') }
+function adminPostsList(page, keyword) { return callAdmin('posts.list', { page: page || 1, pageSize: 20, keyword: keyword || '' }) }
+function adminSetPostTop(postId, top) { return callAdmin('posts.setTop', { postId: postId, top: !!top }) }
+function adminRemovePost(postId) { return callAdmin('posts.remove', { postId: postId }) }
+function adminUsersList(keyword, page) { return callAdmin('users.list', { keyword: keyword || '', page: page || 1, pageSize: 20 }) }
+function adminBanUser(openid, reason) { return callAdmin('users.ban', { openid: openid, reason: reason || '' }) }
+function adminUnbanUser(openid) { return callAdmin('users.unban', { openid: openid }) }
+function adminSetUserRole(openid, role) { return callAdmin('users.setRole', { openid: openid, role: role }) }
+function adminAnnouncements() { return callAdmin('announcements.list') }
+function adminCreateAnnouncement(title, content, pinned) { return callAdmin('announcements.create', { title: title, content: content, pinned: !!pinned }) }
+function adminUpdateAnnouncement(id, data) { return callAdmin('announcements.update', Object.assign({ id: id }, data || {})) }
+function adminRemoveAnnouncement(id) { return callAdmin('announcements.remove', { id: id }) }
+function adminSettings() { return callAdmin('settings.get') }
+function adminSetSetting(key, value) { return callAdmin('settings.set', { key: key, value: value }) }
+function adminAuditList(page) { return callAdmin('audit.list', { page: page || 1, pageSize: 20 }) }
+
 /* ================= 话题关注 ================= */
 
 // 本地演示模式下的关注（内存里记着，重启就没了；云端模式存 follows 集合）
@@ -1657,4 +1698,20 @@ module.exports = {
   fetchReports: fetchReports,
   adminDeletePost: adminDeletePost,
   dismissReport: dismissReport,
+  adminWhoAmI: adminWhoAmI,
+  adminDashboard: adminDashboard,
+  adminPostsList: adminPostsList,
+  adminSetPostTop: adminSetPostTop,
+  adminRemovePost: adminRemovePost,
+  adminUsersList: adminUsersList,
+  adminBanUser: adminBanUser,
+  adminUnbanUser: adminUnbanUser,
+  adminSetUserRole: adminSetUserRole,
+  adminAnnouncements: adminAnnouncements,
+  adminCreateAnnouncement: adminCreateAnnouncement,
+  adminUpdateAnnouncement: adminUpdateAnnouncement,
+  adminRemoveAnnouncement: adminRemoveAnnouncement,
+  adminSettings: adminSettings,
+  adminSetSetting: adminSetSetting,
+  adminAuditList: adminAuditList,
 }

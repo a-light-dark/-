@@ -1,0 +1,150 @@
+.page {
+  padding: 24rpx;
+  padding-bottom: 60rpx;
+}
+
+/* 搜索 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 40rpx;
+  padding: 8rpx 12rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.search-input {
+  flex: 1;
+  height: 64rpx;
+  font-size: 28rpx;
+  padding-left: 20rpx;
+}
+
+.search-btn {
+  color: #07c160;
+  font-size: 28rpx;
+  padding: 0 24rpx;
+}
+
+.search-clear {
+  color: #bbb;
+  font-size: 30rpx;
+  padding: 0 12rpx;
+}
+
+.list-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24rpx;
+  color: #999;
+  margin: 24rpx 8rpx 12rpx;
+}
+
+.list-hint {
+  color: #ccc;
+}
+
+.loading-tip {
+  color: #999;
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+/* 用户卡 */
+.user-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+}
+
+.user-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-nick {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 20rpx;
+  font-weight: 400;
+  border-radius: 8rpx;
+  padding: 2rpx 10rpx;
+  margin-left: 12rpx;
+}
+
+.badge.banned {
+  background: #fde2e2;
+  color: #e64340;
+}
+
+.badge.admin {
+  background: #e7f8ee;
+  color: #07a35a;
+}
+
+.user-sub {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-ops {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.op-btn {
+  font-size: 24rpx;
+  border-radius: 30rpx;
+  padding: 10rpx 24rpx;
+  margin-top: 8rpx;
+  border: 1rpx solid #ddd;
+  color: #666;
+  background: #fff;
+}
+
+.op-btn.danger {
+  border-color: #f3c5c5;
+  color: #e64340;
+}
+
+.op-btn.ok {
+  border-color: #b7e6c9;
+  color: #07a35a;
+}
+
+.op-btn.role {
+  border-color: #b7d4f5;
+  color: #3d7dd8;
+}
+
+/* 空态 */
+.empty {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+}
+
+.empty-text {
+  color: #999;
+  font-size: 28rpx;
+  margin-top: 20rpx;
+}

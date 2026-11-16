@@ -38,7 +38,7 @@ Page({
           const isAdmin = res[1]
           this.setData({
             isAdmin: isAdmin,
-            menus: isAdmin ? BASE_MENUS.concat(['举报处理', '反馈管理']) : BASE_MENUS,
+            menus: isAdmin ? BASE_MENUS.concat(['举报处理', '反馈管理', '管理台']) : BASE_MENUS,
           })
           if (!stats) return
           this.setData({
@@ -130,6 +130,10 @@ Page({
     }
     if (name === '反馈管理') {
       wx.navigateTo({ url: '/pages/feedback-admin/feedback-admin' })
+      return
+    }
+    if (name === '管理台') {
+      wx.navigateTo({ url: '/pages/admin-home/admin-home' })
       return
     }
     this.comingSoon(e)

@@ -1,0 +1,32 @@
+<view class="page">
+  <view wx:if="{{checked && !isAdmin}}" class="empty">
+    <view class="empty-icon">🔒</view>
+    <view class="empty-text">这个页面只有圈主能看</view>
+  </view>
+
+  <block wx:if="{{checked && isAdmin}}">
+    <view wx:if="{{loading}}" class="loading-tip">加载中…</view>
+
+    <view class="section-title">运营参数</view>
+    <view wx:for="{{metas}}" wx:key="key" class="set-card">
+      <view class="set-name">{{item.name}}</view>
+      <view class="set-desc">{{item.desc}}</view>
+      <view class="set-row">
+        <input class="set-input" value="{{drafts[item.key]}}" placeholder="{{item.placeholder}}" maxlength="{{item.max}}" data-key="{{item.key}}" bindinput="onInput" />
+        <view class="set-save {{savingKey === item.key ? 'busy' : ''}}" data-key="{{item.key}}" bindtap="save">{{savingKey === item.key ? '保存中' : '保存'}}</view>
+      </view>
+    </view>
+
+    <view class="section-title">最近操作记录（审计日志）</view>
+    <view wx:if="{{audit.length}}" class="audit-card">
+      <view wx:for="{{audit}}" wx:key="id" class="audit-row">
+        <text class="audit-action">{{item.action}}</text>
+        <text class="audit-target">{{item.detail || item.targetId || ''}}</text>
+      </view>
+      <view class="audit-total">共 {{auditTotal}} 条记录</view>
+    </view>
+    <view wx:else class="empty small">
+      <view class="empty-text">还没有操作记录</view>
+    </view>
+  </block>
+</view>
