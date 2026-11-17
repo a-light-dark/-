@@ -4,6 +4,7 @@
 // 所有管理动作都会写 audit_logs（谁、什么时候、对什么、做了什么）。
 
 const cloud = require('wx-server-sdk')
+const crypto = require('crypto')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -23,7 +24,7 @@ function isOwner(openid) {
   return ADMIN_OPENIDS[0] === openid
 }
 
-// Web 后台登录态：admin_sessions 里的 token（有效期 7 天）
+// Web 后台登录态：admin_sessions 里的 token（有效期 7 天），session 里带角色
 async function resolveToken(token) {
   if (!token) return null
   try {
@@ -31,10 +32,66 @@ async function resolveToken(token) {
     const s = (res.data || [])[0]
     if (!s) return null
     if (Number(s.expiresAt || 0) < Date.now()) return null
-    return { username: s.username || 'admin' }
+    return { username: s.username || 'admin', role: s.role || 'admin' }
   } catch (err) {
     return null
   }
+}
+
+function sha256(str) {
+  return crypto.createHash('sha256').update(String(str)).digest('hex')
+}
+
+// ============ 身份与权限（RBAC） ============
+// owner 圈主 / developer 开发者 / admin 管理员 / operator 运营 / analyst 数据分析员
+// 规则：
+//  - 圈主、开发者、管理员：拥有全部权限
+//  - 开发者的「修改类」操作不会直接执行，先生成一条 approvals 待管理员审核
+//  - 运营：可删帖/删评论/处理举报、管理公告与敏感词、看审计日志（追溯别人的帖子）
+//  - 数据分析员：只读（看数据、看列表，不能改）
+let ACTOR = { name: '', role: '' }
+const ROLE_LABEL = { owner: '圈主', developer: '开发者', admin: '管理员', operator: '运营', analyst: '数据分析员' }
+
+// 会改动数据的动作（开发者调用时走审核）
+const MUTATIONS = [
+  'posts.setTop', 'posts.remove', 'comments.remove', 'reports.dismiss', 'reports.removePost',
+  'users.ban', 'users.unban', 'users.setRole', 'feedback.resolve', 'feedback.remove',
+  'announcements.create', 'announcements.update', 'announcements.remove', 'settings.set',
+  'trash.restore', 'trash.purge', 'wordfilters.add', 'wordfilters.remove',
+  'backup.create', 'backup.remove',
+  'accounts.create', 'accounts.setRole', 'accounts.setPassword', 'accounts.setActive', 'accounts.remove',
+  'approvals.approve', 'approvals.reject',
+]
+
+const OPERATOR_READ = ['dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'audit.list', 'trash.list', 'wordfilters.list', 'posts.trace']
+const OPERATOR_WRITE = ['posts.remove', 'posts.setTop', 'comments.remove', 'reports.dismiss', 'reports.removePost', 'feedback.resolve', 'announcements.create', 'announcements.update', 'announcements.remove', 'wordfilters.add', 'wordfilters.remove']
+const ANALYST_READ = ['dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'trash.list', 'wordfilters.list']
+
+function allowRole(role, action) {
+  if (!role) return false
+  // 账号管理只给圈主
+  if (action.indexOf('accounts.') === 0) return role === 'owner'
+  // 审核只有圈主/管理员能做（开发者只负责提交）
+  if (action.indexOf('approvals.') === 0) return role === 'owner' || role === 'admin'
+  if (role === 'owner' || role === 'admin' || role === 'developer') return true
+  if (role === 'operator') return OPERATOR_READ.indexOf(action) > -1 || OPERATOR_WRITE.indexOf(action) > -1
+  if (role === 'analyst') return ANALYST_READ.indexOf(action) > -1
+  return false
+}
+
+// 小程序端的管理员：圈主白名单 / 资料里 role === 'admin'
+async function roleOfOpenid(openid) {
+  if (!openid) return ''
+  if (isOwner(openid)) return 'owner'
+  if (isAdmin(openid)) return 'admin'
+  try {
+    const res = await db.collection('users').where({ _openid: openid }).limit(1).get()
+    const u = (res.data || [])[0]
+    if (u && u.role === 'admin') return 'admin'
+  } catch (err) {
+    console.warn('查用户角色失败', err && err.message)
+  }
+  return ''
 }
 
 // 转时间戳（毫秒），数据库里可能是 Date 或毫秒
@@ -53,6 +110,8 @@ async function audit(action, targetType, targetId, detail) {
         targetType: String(targetType || ''),
         targetId: String(targetId || ''),
         detail: String(detail || ''),
+        by: ACTOR.name || cloud.getWXContext().OPENID || '',
+        role: ACTOR.role || '',
         at: db.serverDate(),
         _openid: cloud.getWXContext().OPENID,
       },
@@ -788,32 +847,237 @@ async function settingsSet(key, value) {
 async function auditList(event) {
   const page = Math.max(1, Number(event.page) || 1)
   const pageSize = Math.min(50, Math.max(1, Number(event.pageSize) || 20))
-  const countRes = await db.collection('audit_logs').count()
-  const listRes = await db.collection('audit_logs').orderBy('at', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
+  const targetId = String(event.targetId || '').trim()
+  let query = db.collection('audit_logs')
+  if (targetId) query = query.where({ targetId: targetId })
+  const countRes = await query.count()
+  const listRes = await query.orderBy('at', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
   return {
     ok: true,
     list: (listRes.data || []).map(function (a) {
-      return { id: a._id, action: a.action, targetType: a.targetType, targetId: a.targetId, detail: a.detail, at: ts(a.at) }
+      return { id: a._id, action: a.action, targetType: a.targetType, targetId: a.targetId, detail: a.detail, by: a.by || '', role: a.role || '', at: ts(a.at) }
     }),
     total: countRes.total,
   }
 }
 
+
+// ============ 后台账号（多身份） ============
+async function accountsList() {
+  let res
+  try {
+    res = await db.collection('admin_accounts').orderBy('createdAt', 'asc').limit(100).get()
+  } catch (err) {
+    return { ok: false, msg: '账号集合还没建（跑一次 setupCollections）' }
+  }
+  return {
+    ok: true,
+    list: (res.data || []).map(function (a) {
+      return {
+        username: a.username,
+        role: a.role || 'admin',
+        roleLabel: ROLE_LABEL[a.role] || a.role || '管理员',
+        nickname: a.nickname || '',
+        active: a.active !== false,
+        createdAt: ts(a.createdAt),
+      }
+    }),
+  }
+}
+
+async function accountCreate(event) {
+  const username = String(event.username || '').trim()
+  const role = String(event.role || 'operator')
+  const password = String(event.password || '')
+  const nickname = String(event.nickname || '').trim()
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return { ok: false, msg: '账号要 3-20 位字母/数字/下划线' }
+  if (!ROLE_LABEL[role]) return { ok: false, msg: '角色不对' }
+  if (password.length < 6) return { ok: false, msg: '初始密码至少 6 位' }
+  const dup = await db.collection('admin_accounts').where({ username: username }).limit(1).get()
+  if ((dup.data || []).length) return { ok: false, msg: '这个账号已经有了' }
+  await db.collection('admin_accounts').add({
+    data: { username: username, role: role, nickname: nickname || username, passwordHash: sha256(password), active: true, createdAt: db.serverDate() },
+  })
+  return { ok: true, username: username, role: role }
+}
+
+async function ownerCount() {
+  try {
+    const res = await db.collection('admin_accounts').where({ role: 'owner' }).count()
+    return res.total || 0
+  } catch (err) {
+    return 1
+  }
+}
+
+async function accountSetRole(username, role) {
+  const u = String(username || '')
+  const r = String(role || '')
+  if (!u) return { ok: false, msg: '缺少账号' }
+  if (r && !ROLE_LABEL[r]) return { ok: false, msg: '角色不对' }
+  if (!r && (await ownerCount()) <= 1) return { ok: false, msg: '至少要保留一个圈主' }
+  const res = await db.collection('admin_accounts').where({ username: u }).update({ data: { role: r, updatedAt: db.serverDate() } })
+  if (!res.stats.updated) return { ok: false, msg: '账号不存在' }
+  // 让这个账号已登录的 token 也立刻换角色
+  try {
+    await db.collection('admin_sessions').where({ username: u }).update({ data: { role: r } })
+  } catch (err) {
+    console.warn('同步 session 角色失败', err && err.message)
+  }
+  return { ok: true }
+}
+
+async function accountSetPassword(username, password) {
+  const u = String(username || '')
+  const p = String(password || '')
+  if (p.length < 6) return { ok: false, msg: '新密码至少 6 位' }
+  const res = await db.collection('admin_accounts').where({ username: u }).update({ data: { passwordHash: sha256(p), updatedAt: db.serverDate() } })
+  if (!res.stats.updated) return { ok: false, msg: '账号不存在' }
+  return { ok: true }
+}
+
+async function accountSetActive(username, active) {
+  const u = String(username || '')
+  if (u === ACTOR.name && active === false) return { ok: false, msg: '不能停用自己' }
+  if (active === false) {
+    const acc = await db.collection('admin_accounts').where({ username: u }).limit(1).get()
+    const a = (acc.data || [])[0]
+    if (a && a.role === 'owner' && (await ownerCount()) <= 1) return { ok: false, msg: '至少要保留一个圈主' }
+  }
+  const res = await db.collection('admin_accounts').where({ username: u }).update({ data: { active: active !== false, updatedAt: db.serverDate() } })
+  if (!res.stats.updated) return { ok: false, msg: '账号不存在' }
+  return { ok: true }
+}
+
+async function accountRemove(username) {
+  const u = String(username || '')
+  if (u === ACTOR.name) return { ok: false, msg: '不能删自己' }
+  const acc = await db.collection('admin_accounts').where({ username: u }).limit(1).get()
+  const a = (acc.data || [])[0]
+  if (!a) return { ok: false, msg: '账号不存在' }
+  if (a.role === 'owner' && (await ownerCount()) <= 1) return { ok: false, msg: '至少要保留一个圈主' }
+  await db.collection('admin_accounts').where({ username: u }).remove()
+  try {
+    await db.collection('admin_sessions').where({ username: u }).remove()
+  } catch (err) {
+    console.warn('删会话失败', err && err.message)
+  }
+  return { ok: true }
+}
+
+// ============ 审核（开发者的修改要管理员点通过） ============
+async function approvalsList(event) {
+  const page = Math.max(1, Number(event.page) || 1)
+  const pageSize = Math.min(50, Math.max(1, Number(event.pageSize) || 20))
+  const status = String(event.status || '')
+  let query = db.collection('approvals')
+  if (status) query = query.where({ status: status })
+  const countRes = await query.count()
+  const listRes = await query.orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
+  return {
+    ok: true,
+    list: (listRes.data || []).map(function (a) {
+      return {
+        id: a._id,
+        action: a.action,
+        payload: a.payload || {},
+        requestedBy: a.requestedBy || '',
+        requestedRole: a.requestedRole || '',
+        status: a.status || 'pending',
+        result: a.result || '',
+        approvedBy: a.approvedBy || '',
+        createdAt: ts(a.createdAt),
+        handledAt: ts(a.approvedAt || a.rejectedAt),
+      }
+    }),
+    total: countRes.total,
+  }
+}
+
+async function approvalApprove(event, actor) {
+  const id = String(event.id || '')
+  if (!id) return { ok: false, msg: '缺少审核 id' }
+  let doc
+  try {
+    doc = (await db.collection('approvals').doc(id).get()).data
+  } catch (err) {
+    return { ok: false, msg: '这条审核记录不存在' }
+  }
+  if (!doc) return { ok: false, msg: '这条审核记录不存在' }
+  if (doc.status !== 'pending') return { ok: false, msg: '这条已经被处理过了' }
+
+  await db.collection('approvals').doc(id).update({
+    data: { status: 'approved', approvedBy: actor.name, approvedAt: db.serverDate() },
+  })
+
+  // 用管理员身份重新执行一次原动作（_fromApproval 防止再次进入审核）
+  const payload = Object.assign({}, doc.payload || {}, { action: doc.action, token: event.token, _fromApproval: id })
+  const res = await exports.main(payload)
+
+  const ok = !!(res && res.ok !== false)
+  await db.collection('approvals').doc(id).update({
+    data: { status: ok ? 'executed' : 'failed', result: ok ? '已执行' : ((res && res.msg) || '执行失败'), executedAt: db.serverDate() },
+  })
+  if (!ok) return { ok: false, msg: (res && res.msg) || '审核通过了，但执行失败' }
+  return { ok: true, result: res }
+}
+
+async function approvalReject(id, reason) {
+  const rid = String(id || '')
+  if (!rid) return { ok: false, msg: '缺少审核 id' }
+  const res = await db.collection('approvals').where({ _id: rid, status: 'pending' }).update({
+    data: { status: 'rejected', result: String(reason || '管理员驳回了这次修改'), rejectedAt: db.serverDate() },
+  })
+  if (!res.stats.updated) return { ok: false, msg: '这条已经被处理过了' }
+  return { ok: true }
+}
+
+// ============ exports.main ============
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   const action = String(event.action || '')
 
-  // Web 后台没有 openid，用「登录 token」鉴权；小程序继续用 openid 白名单
+  // Web 端用登录 token（带角色）；小程序端用 openid 白名单 / users.role
   const webUser = await resolveToken(event.token)
-  const adminOk = !!webUser || isAdmin(OPENID)
+  const role = webUser ? (webUser.role || 'admin') : await roleOfOpenid(OPENID)
+  const actor = role ? { name: (webUser && webUser.username) || '小程序管理员', role: role } : null
+  ACTOR = actor || { name: '', role: '' }
 
-  // 前端用它判断「我的」页要不要显示「管理台」入口
+  // 前端用它判断「我的」页要不要显示「管理台」入口，以及菜单显示哪些
   if (action === 'isAdmin') {
-    return { ok: true, admin: adminOk, owner: webUser ? true : isOwner(OPENID) }
+    return {
+      ok: true,
+      admin: !!actor,
+      owner: role === 'owner',
+      role: role || '',
+      roleLabel: ROLE_LABEL[role] || '',
+      username: actor ? actor.name : '',
+    }
   }
 
-  if (!adminOk) {
-    return { ok: false, msg: '你没有管理权限' }
+  if (!actor) return { ok: false, msg: '你没有管理权限' }
+  if (!allowRole(role, action)) {
+    return { ok: false, msg: '当前身份（' + (ROLE_LABEL[role] || role) + '）没有这个操作的权限' }
+  }
+
+  // 开发者：修改类操作先提交给管理员审核
+  if (role === 'developer' && MUTATIONS.indexOf(action) > -1 && !event._fromApproval) {
+    const payload = {}
+    Object.keys(event).forEach(function (k) {
+      if (k !== 'token' && k !== 'action' && k !== '_fromApproval') payload[k] = event[k]
+    })
+    const add = await db.collection('approvals').add({
+      data: {
+        action: action,
+        payload: payload,
+        requestedBy: actor.name,
+        requestedRole: role,
+        status: 'pending',
+        createdAt: db.serverDate(),
+      },
+    })
+    await audit('approval.request', 'approval', add._id, action)
+    return { ok: true, pending: true, approvalId: add._id, msg: '已提交给管理员审核，通过后才会生效' }
   }
 
   try {
@@ -882,7 +1146,7 @@ exports.main = async (event) => {
         if (res.ok) await audit('users.unban', 'user', event.openid, '')
         break
       case 'users.setRole':
-        if (!(webUser || isOwner(OPENID))) return { ok: false, msg: '只有超管能任免管理员' }
+        if (ACTOR.role !== 'owner') return { ok: false, msg: '只有圈主能任免管理员' }
         res = await setUserRole(event.openid, event.role)
         if (res.ok) await audit('users.setRole', 'user', event.openid, event.role || '取消管理员')
         break
@@ -957,6 +1221,43 @@ exports.main = async (event) => {
       case 'backup.remove':
         res = await backupRemove(event.id)
         if (res.ok) await audit('backup.remove', 'backup', event.id, '')
+        break
+      case 'posts.trace':
+        res = await auditList({ targetId: event.postId, page: event.page, pageSize: event.pageSize })
+        break
+      case 'accounts.list':
+        res = await accountsList()
+        break
+      case 'accounts.create':
+        res = await accountCreate(event)
+        if (res.ok) await audit('accounts.create', 'account', res.username, res.role)
+        break
+      case 'accounts.setRole':
+        res = await accountSetRole(event.username, event.role)
+        if (res.ok) await audit('accounts.setRole', 'account', event.username, event.role || '')
+        break
+      case 'accounts.setPassword':
+        res = await accountSetPassword(event.username, event.password)
+        if (res.ok) await audit('accounts.setPassword', 'account', event.username, '')
+        break
+      case 'accounts.setActive':
+        res = await accountSetActive(event.username, event.active !== false)
+        if (res.ok) await audit('accounts.setActive', 'account', event.username, event.active === false ? '停用' : '启用')
+        break
+      case 'accounts.remove':
+        res = await accountRemove(event.username)
+        if (res.ok) await audit('accounts.remove', 'account', event.username, '')
+        break
+      case 'approvals.list':
+        res = await approvalsList(event)
+        break
+      case 'approvals.approve':
+        res = await approvalApprove(event, actor)
+        if (res.ok) await audit('approvals.approve', 'approval', event.id, '')
+        break
+      case 'approvals.reject':
+        res = await approvalReject(event.id, event.reason)
+        if (res.ok) await audit('approvals.reject', 'approval', event.id, event.reason || '')
         break
       default:
         return { ok: false, msg: '不认识的操作：' + action }

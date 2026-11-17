@@ -89,6 +89,26 @@ const AUDIT = Array.from({ length: 12 }, (_, i) => ({
   at: now - i * 1800 * 1000,
 }))
 
+
+const ACCOUNTS = [
+  { username: 'admin', nickname: '圈主', role: 'owner', active: true, createdAt: now - 86400000 * 30 },
+  { username: 'dev01', nickname: '前端开发者', role: 'developer', active: true, createdAt: now - 86400000 * 9 },
+  { username: 'ops01', nickname: '校园运营', role: 'operator', active: true, createdAt: now - 86400000 * 6 },
+  { username: 'ana01', nickname: '数据同学', role: 'analyst', active: true, createdAt: now - 86400000 * 3 },
+]
+
+const APPROVALS = Array.from({ length: 3 }, (_, i) => ({
+  id: 'apr_' + i,
+  action: i === 0 ? 'posts.remove' : i === 1 ? 'wordfilters.add' : 'settings.set',
+  payload: i === 0 ? { postId: 'post_' + i } : i === 1 ? { word: '代写作业' } : { key: 'bannerText' },
+  requestedBy: 'dev01',
+  requestedRole: 'developer',
+  status: 'pending',
+  result: '',
+  createdAt: now - 3600000 * (i + 1),
+  handledAt: 0,
+}))
+
 const SETTINGS = {
   bannerText: '校园圈体验版上线啦',
   announcementEnabled: 'true',
@@ -124,7 +144,7 @@ export function mockCall(name, data) {
 
   const action = d.action
 
-  if (action === 'isAdmin') return { ok: true, admin: true, owner: true }
+  if (action === 'isAdmin') { const role = localStorage.getItem('mock_role') || 'owner'; const label = { owner: '圈主', developer: '开发者', admin: '管理员', operator: '运营', analyst: '数据分析员' }[role] || '圈主'; return { ok: true, admin: true, owner: role === 'owner', role: role, roleLabel: label, username: 'admin' } }
 
   if (action === 'dashboard') {
     return {
@@ -159,6 +179,57 @@ export function mockCall(name, data) {
   if (action === 'trash.list') return page(TRASH, d.page, d.pageSize)
   if (action === 'wordfilters.list') return { ok: true, list: WORDS, total: WORDS.length }
   if (action === 'backup.list') return { ok: true, list: BACKUPS, total: BACKUPS.length }
+
+  if (action === 'accounts.list') return { ok: true, list: ACCOUNTS }
+
+  if (action === 'accounts.create') {
+    const username = String(d.username || '').trim()
+    if (ACCOUNTS.some((a) => a.username === username)) return { ok: false, msg: '这个账号已经有了' }
+    ACCOUNTS.push({ username, nickname: d.nickname || username, role: d.role || 'operator', active: true, createdAt: Date.now() })
+    return { ok: true, username }
+  }
+  if (action === 'accounts.setRole') {
+    const a = ACCOUNTS.find((x) => x.username === d.username)
+    if (!a) return { ok: false, msg: '账号不存在' }
+    a.role = d.role || 'operator'
+    return { ok: true }
+  }
+  if (action === 'accounts.setPassword') return { ok: true }
+  if (action === 'accounts.setActive') {
+    const a = ACCOUNTS.find((x) => x.username === d.username)
+    if (!a) return { ok: false, msg: '账号不存在' }
+    a.active = d.active !== false
+    return { ok: true }
+  }
+  if (action === 'accounts.remove') {
+    const i = ACCOUNTS.findIndex((x) => x.username === d.username)
+    if (i > -1) ACCOUNTS.splice(i, 1)
+    return { ok: true }
+  }
+
+  if (action === 'approvals.list') {
+    const status = String(d.status || '').trim()
+    const list = status ? APPROVALS.filter((a) => a.status === status) : APPROVALS
+    return page(list, d.page, d.pageSize)
+  }
+  if (action === 'approvals.approve') {
+    const a = APPROVALS.find((x) => x.id === d.id)
+    if (!a) return { ok: false, msg: '这条审核记录不存在' }
+    a.status = 'executed'
+    a.result = '已执行'
+    return { ok: true }
+  }
+  if (action === 'approvals.reject') {
+    const a = APPROVALS.find((x) => x.id === d.id)
+    if (!a) return { ok: false, msg: '这条审核记录不存在' }
+    a.status = 'rejected'
+    a.result = d.reason || '管理员驳回'
+    return { ok: true }
+  }
+
+  if (action === 'posts.trace') {
+    return page(AUDIT.filter((x) => String(x.targetId || '').indexOf(String(d.postId || '')) > -1), d.page, d.pageSize)
+  }
 
   if (action === 'backup.download') {
     return { ok: true, url: 'https://example.com/backup-demo.json' }

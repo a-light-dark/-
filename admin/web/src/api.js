@@ -1,6 +1,7 @@
 // 数据层：PC 后台和手机端共用同一个 adminApi 云函数
 // 网页没有 openid，所以先调 adminLogin 拿 token，之后每次调用都带上
 import cloudbase from '@cloudbase/js-sdk'
+import { ElMessage } from 'element-plus'
 
 const ENV = import.meta.env.VITE_TCB_ENV || 'cloud1-d6g26wz61eca836b8'
 const MOCK = String(import.meta.env.VITE_MOCK || '') === 'true'
@@ -70,7 +71,12 @@ export async function logout() {
 
 export async function callAdmin(action, payload = {}) {
   const r = await invoke('adminApi', Object.assign({ action, token: getToken() }, payload))
-  if (r && r.ok === false && /权限/.test(String(r.msg || ''))) setToken('')
+  // 开发者提交的修改不会立刻生效，会先进入「审核」，这里统一提示一下
+  if (r && r.pending) ElMessage.warning(r.msg || '已提交给管理员审核，通过后才会生效')
+  if (r && r.ok === false && /权限/.test(String(r.msg || ''))) {
+    ElMessage.error(r.msg)
+    setToken('')
+  }
   return r
 }
 
@@ -122,3 +128,19 @@ export const fetchIsAdmin = () => callAdmin('isAdmin')
 export async function changePassword(oldPassword, newPassword) {
   return invoke('adminLogin', { action: 'changePassword', token: getToken(), oldPassword, newPassword })
 }
+
+// ===== 身份与账号（RBAC）=====
+export const fetchMe = () => callAdmin('isAdmin')
+
+export const fetchAccounts = () => callAdmin('accounts.list')
+export const createAccount = (payload) => callAdmin('accounts.create', payload)
+export const setAccountRole = (username, role) => callAdmin('accounts.setRole', { username, role })
+export const setAccountPassword = (username, password) => callAdmin('accounts.setPassword', { username, password })
+export const setAccountActive = (username, active) => callAdmin('accounts.setActive', { username, active })
+export const removeAccount = (username) => callAdmin('accounts.remove', { username })
+
+export const fetchApprovals = (page = 1, pageSize = 20, status = '') => callAdmin('approvals.list', { page, pageSize, status })
+export const approveApproval = (id) => callAdmin('approvals.approve', { id })
+export const rejectApproval = (id, reason = '') => callAdmin('approvals.reject', { id, reason })
+
+export const tracePost = (postId, page = 1, pageSize = 20) => callAdmin('posts.trace', { postId, page, pageSize })

@@ -10,6 +10,8 @@ import Settings from './views/Settings.vue'
 import Trash from './views/Trash.vue'
 import Words from './views/Words.vue'
 import Backup from './views/Backup.vue'
+import Accounts from './views/Accounts.vue'
+import Approvals from './views/Approvals.vue'
 import { getToken } from './api.js'
 
 const router = createRouter({
@@ -28,6 +30,8 @@ const router = createRouter({
     { path: '/trash', component: Trash, meta: { title: '回收站' } },
     { path: '/words', component: Words, meta: { title: '敏感词库' } },
     { path: '/backup', component: Backup, meta: { title: '数据备份' } },
+    { path: '/approvals', component: Approvals, meta: { title: '修改审核' } },
+    { path: '/accounts', component: Accounts, meta: { title: '账号管理', ownerOnly: true } },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 })

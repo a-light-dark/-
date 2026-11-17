@@ -10,27 +10,21 @@
         </div>
       </div>
       <el-menu :default-active="route.path" router class="menu">
-        <el-menu-item index="/dashboard">📊 工作台</el-menu-item>
-        <el-menu-item index="/reports">🚩 举报处理</el-menu-item>
-        <el-menu-item index="/posts">📝 帖子管理</el-menu-item>
-        <el-menu-item index="/users">👥 用户管理</el-menu-item>
-        <el-menu-item index="/feedback">💬 建议反馈</el-menu-item>
-        <el-menu-item index="/announcements">📢 公告管理</el-menu-item>
-        <el-menu-item index="/settings">⚙️ 运营配置</el-menu-item>
-        <el-menu-item index="/trash">🗑️ 回收站</el-menu-item>
-        <el-menu-item index="/words">🚫 敏感词库</el-menu-item>
-        <el-menu-item index="/backup">💾 数据备份</el-menu-item>
+        <el-menu-item v-for="m in menus" :key="m.path" :index="m.path">
+          {{ m.icon }} {{ m.label }}
+        </el-menu-item>
       </el-menu>
       <div class="aside-foot">
         <span v-if="isMock" class="mock-flag">演示模式</span>
-        <span class="version">v0.7 · PC 后台</span>
+        <span class="version">v0.8 · PC 后台</span>
       </div>
     </el-aside>
     <el-container>
       <el-header class="header">
         <div class="header-title">{{ route.meta.title || '' }}</div>
         <div class="header-right">
-          <span class="admin-name">圈主</span>
+          <el-tag v-if="me.roleLabel" size="small" :type="roleTagType" effect="plain">{{ me.roleLabel }}</el-tag>
+          <span class="admin-name">{{ me.username || '未登录' }}</span>
           <el-button text @click="onLogout">退出登录</el-button>
         </div>
       </el-header>
@@ -42,12 +36,72 @@
 </template>
 
 <script setup>
+import { computed, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { isMock, logout } from './api.js'
+import { fetchMe, isMock, logout } from './api.js'
 
 const route = useRoute()
 const router = useRouter()
+
+const me = reactive({ username: '', role: '', roleLabel: '' })
+
+// 角色 → 能看哪些菜单
+const MENUS = [
+  { path: '/dashboard', icon: '📊', label: '工作台', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/reports', icon: '🚩', label: '举报处理', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/posts', icon: '📝', label: '帖子管理', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/users', icon: '👥', label: '用户管理', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/feedback', icon: '💬', label: '建议反馈', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/announcements', icon: '📢', label: '公告管理', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/words', icon: '🚫', label: '敏感词库', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/trash', icon: '🗑️', label: '回收站', roles: ['owner', 'developer', 'admin', 'operator'] },
+  { path: '/settings', icon: '⚙️', label: '运营配置', roles: ['owner', 'developer', 'admin'] },
+  { path: '/backup', icon: '💾', label: '数据备份', roles: ['owner', 'developer', 'admin'] },
+  { path: '/approvals', icon: '✅', label: '修改审核', roles: ['owner', 'developer', 'admin'] },
+  { path: '/accounts', icon: '🔐', label: '账号管理', roles: ['owner'] },
+]
+
+const menus = computed(() => {
+  if (!me.role) return MENUS.filter((m) => m.roles.indexOf('analyst') > -1)
+  return MENUS.filter((m) => m.roles.indexOf(me.role) > -1)
+})
+
+const roleTagType = computed(() => {
+  if (me.role === 'owner') return 'success'
+  if (me.role === 'developer') return 'warning'
+  if (me.role === 'admin') return 'primary'
+  if (me.role === 'operator') return 'info'
+  return 'info'
+})
+
+async function loadMe() {
+  const res = await fetchMe()
+  if (res && res.ok && res.admin) {
+    me.username = res.username || ''
+    me.role = res.role || ''
+    me.roleLabel = res.roleLabel || ''
+  }
+}
+
+onMounted(() => {
+  // 演示模式可以用 ?role=analyst 直接切换身份看菜单
+  const q = new URLSearchParams(location.search).get('role')
+  if (isMock && q && ['owner', 'developer', 'admin', 'operator', 'analyst'].indexOf(q) > -1) localStorage.setItem('mock_role', q)
+  loadMe()
+})
+
+// 没权限的页面（比如运营打开运营配置）直接送回工作台
+watch(
+  () => [route.path, me.role],
+  () => {
+    if (route.meta.public || !me.role) return
+    const hit = MENUS.find((m) => m.path === route.path)
+    if (hit && hit.roles.indexOf(me.role) === -1) {
+      router.replace('/dashboard')
+    }
+  }
+)
 
 async function onLogout() {
   try {
@@ -105,6 +159,7 @@ async function onLogout() {
   border-right: none;
   background: transparent;
   flex: 1;
+  overflow-y: auto;
 }
 
 .menu :deep(.el-menu-item) {
