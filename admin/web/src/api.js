@@ -73,7 +73,8 @@ export async function callAdmin(action, payload = {}) {
   const r = await invoke('adminApi', Object.assign({ action, token: getToken() }, payload))
   // 开发者提交的修改不会立刻生效，会先进入「审核」，这里统一提示一下
   if (r && r.pending) ElMessage.warning(r.msg || '已提交给管理员审核，通过后才会生效')
-  if (r && r.ok === false && /权限/.test(String(r.msg || ''))) {
+  // 只有「登录失效 / 没有管理权限」才清 token；普通「这个角色不能做」只提示，不要把用户踢出去
+  if (r && r.ok === false && /登录|重新登录|没有管理权限/.test(String(r.msg || ''))) {
     ElMessage.error(r.msg)
     setToken('')
   }

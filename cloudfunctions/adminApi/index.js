@@ -71,7 +71,8 @@ function allowRole(role, action) {
   if (!role) return false
   // 账号管理只给圈主
   if (action.indexOf('accounts.') === 0) return role === 'owner'
-  // 审核只有圈主/管理员能做（开发者只负责提交）
+  // 审核列表开发者可以看（只看自己提交的），通过/驳回只有圈主/管理员能做
+  if (action === 'approvals.list') return role === 'owner' || role === 'admin' || role === 'developer'
   if (action.indexOf('approvals.') === 0) return role === 'owner' || role === 'admin'
   if (role === 'owner' || role === 'admin' || role === 'developer') return true
   if (role === 'operator') return OPERATOR_READ.indexOf(action) > -1 || OPERATOR_WRITE.indexOf(action) > -1
@@ -936,9 +937,9 @@ async function accountSetPassword(username, password) {
   return { ok: true }
 }
 
-async function accountSetActive(username, active) {
+async function accountSetActive(username, active, actorName) {
   const u = String(username || '')
-  if (u === ACTOR.name && active === false) return { ok: false, msg: '不能停用自己' }
+  if (u === actorName && active === false) return { ok: false, msg: '不能停用自己' }
   if (active === false) {
     const acc = await db.collection('admin_accounts').where({ username: u }).limit(1).get()
     const a = (acc.data || [])[0]
@@ -966,12 +967,16 @@ async function accountRemove(username) {
 }
 
 // ============ 审核（开发者的修改要管理员点通过） ============
-async function approvalsList(event) {
+async function approvalsList(event, actor) {
   const page = Math.max(1, Number(event.page) || 1)
   const pageSize = Math.min(50, Math.max(1, Number(event.pageSize) || 20))
   const status = String(event.status || '')
+  const where = {}
+  if (status) where.status = status
+  // 开发者只能看到自己提交的审核单
+  if (actor && actor.role === 'developer') where.requestedBy = actor.name
   let query = db.collection('approvals')
-  if (status) query = query.where({ status: status })
+  if (Object.keys(where).length) query = query.where(where)
   const countRes = await query.count()
   const listRes = await query.orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
   return {
@@ -1012,7 +1017,13 @@ async function approvalApprove(event, actor) {
 
   // 用管理员身份重新执行一次原动作（_fromApproval 防止再次进入审核）
   const payload = Object.assign({}, doc.payload || {}, { action: doc.action, token: event.token, _fromApproval: id })
-  const res = await exports.main(payload)
+  let res
+  try {
+    res = await exports.main(payload)
+  } catch (err) {
+    console.warn('审核重放失败', err && err.message)
+    res = { ok: false, msg: (err && err.message) || '执行失败' }
+  }
 
   const ok = !!(res && res.ok !== false)
   await db.collection('approvals').doc(id).update({
@@ -1146,7 +1157,7 @@ exports.main = async (event) => {
         if (res.ok) await audit('users.unban', 'user', event.openid, '')
         break
       case 'users.setRole':
-        if (ACTOR.role !== 'owner') return { ok: false, msg: '只有圈主能任免管理员' }
+        if (role !== 'owner') return { ok: false, msg: '只有圈主能任免管理员' }
         res = await setUserRole(event.openid, event.role)
         if (res.ok) await audit('users.setRole', 'user', event.openid, event.role || '取消管理员')
         break
@@ -1241,7 +1252,7 @@ exports.main = async (event) => {
         if (res.ok) await audit('accounts.setPassword', 'account', event.username, '')
         break
       case 'accounts.setActive':
-        res = await accountSetActive(event.username, event.active !== false)
+        res = await accountSetActive(event.username, event.active !== false, actor.name)
         if (res.ok) await audit('accounts.setActive', 'account', event.username, event.active === false ? '停用' : '启用')
         break
       case 'accounts.remove':
@@ -1249,7 +1260,7 @@ exports.main = async (event) => {
         if (res.ok) await audit('accounts.remove', 'account', event.username, '')
         break
       case 'approvals.list':
-        res = await approvalsList(event)
+        res = await approvalsList(event, actor)
         break
       case 'approvals.approve':
         res = await approvalApprove(event, actor)
