@@ -5,6 +5,20 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+
+// 内容版本号 +1：小程序靠它判断「首页数据变了没」，没变就不用重拉
+async function bumpContentVersion() {
+  try {
+    await db.collection('meta').doc('versions').update({
+      data: { content: db.command.inc(1), updatedAt: db.serverDate() },
+    })
+  } catch (err) {
+    try {
+      await db.collection('meta').doc('versions').set({ data: { content: 1, ads: 0, config: 0, updatedAt: db.serverDate() } })
+    } catch (e) {}
+  }
+}
+
 const _ = db.command
 
 // 订阅消息模板 ID：和 miniprogram/utils/subscribe.js 里保持一致；留空就跳过推送
@@ -106,5 +120,6 @@ exports.main = async (event) => {
     })
   }
 
+  await bumpContentVersion()
   return { liked, likeCount }
 }

@@ -5,6 +5,19 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
+// 内容版本号 +1：小程序靠它判断「首页数据变了没」，没变就不用重拉
+async function bumpContentVersion() {
+  try {
+    await db.collection('meta').doc('versions').update({
+      data: { content: db.command.inc(1), updatedAt: db.serverDate() },
+    })
+  } catch (err) {
+    try {
+      await db.collection('meta').doc('versions').set({ data: { content: 1, ads: 0, config: 0, updatedAt: db.serverDate() } })
+    } catch (e) {}
+  }
+}
+
 async function checkText(content, scene, openid) {
   try {
     const res = await cloud.openapi.security.msgSecCheck({
@@ -22,16 +35,34 @@ async function checkText(content, scene, openid) {
 }
 
 // 敏感词库（圈主在管理台维护）：本地先拦一道
+// 词库只有一份汇总文档：每次读 1 次即可（以前是扫 200 条），加词立刻生效
+async function loadWords() {
+  try {
+    const r = await db.collection('wordlist').doc('main').get()
+    const list = ((r.data && r.data.words) || []).filter(function (w) { return w && String(w.word || '').trim() })
+    return list
+  } catch (err) {
+    try {
+      const r2 = await db.collection('wordfilters').limit(200).get()
+      const list = (r2.data || [])
+        .map(function (w) { return { id: w._id, word: w.word } })
+        .filter(function (w) { return w && String(w.word || '').trim() })
+      return list
+    } catch (e2) {
+      return []
+    }
+  }
+}
+
 async function checkWords(content) {
   try {
-    const res = await db.collection('wordfilters').limit(200).get()
-    const list = (res.data || []).filter(function (w) { return w && String(w.word || '').trim() })
+    const list = await loadWords()
     if (!list.length) return { ok: true }
     const hit = list.find(function (w) { return content.indexOf(String(w.word).trim()) > -1 })
     if (hit) {
       // 命中次数给管理台看（失败不影响拦截）
       try {
-        await db.collection('wordfilters').doc(hit._id).update({
+        await db.collection('wordfilters').doc(hit.id).update({
           data: { hits: db.command.inc(1), lastHitAt: db.serverDate() },
         })
       } catch (err) {

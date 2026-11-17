@@ -10,7 +10,7 @@ const db = cloud.database()
 
 // 1) 建全部集合（已存在就跳过，可重复调用）：换新环境后跑一次即可
 const COLLECTIONS = [
-  'ads','posts', 'comments', 'orders', 'users', 'likes', 'favorites', 'reports', 'notices', 'feedback', 'follows', 'reviews', 'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters', 'backups', 'admin_sessions', 'admin_accounts', 'approvals']
+  'ads','posts', 'comments', 'orders', 'users', 'likes', 'favorites', 'reports', 'notices', 'feedback', 'follows', 'reviews', 'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters', 'backups', 'admin_sessions', 'admin_accounts', 'approvals', 'meta', 'wordlist']
 
 exports.main = async (event) => {
   const result = {}
@@ -23,6 +23,45 @@ exports.main = async (event) => {
     } catch (err) {
       result[name] = 'exists'
     }
+  }
+
+
+  // 版本号文档 + 词库汇总文档（单词库读 1 次顶扫 200 条；首页接口靠版本号判断要不要重算）
+  try {
+    let hasVersion = false
+    try {
+      const v = await db.collection('meta').doc('versions').get()
+      hasVersion = !!(v && v.data)
+    } catch (e) {
+      hasVersion = false
+    }
+    if (!hasVersion) {
+      await db.collection('meta').doc('versions').set({ data: { content: 0, ads: 0, config: 0, updatedAt: db.serverDate() } })
+    }
+    result.versions = hasVersion ? 'exists' : 'created'
+  } catch (err) {
+    result.versions = 'error'
+  }
+  try {
+    let wl = null
+    try {
+      const w = await db.collection('wordlist').doc('main').get()
+      wl = (w && w.data) || null
+    } catch (e) {
+      wl = null
+    }
+    if (!wl) {
+      const ws = await db.collection('wordfilters').limit(200).get().catch(function () { return { data: [] } })
+      const words = (ws.data || [])
+        .map(function (w) { return { id: w._id, word: String(w.word || '') } })
+        .filter(function (w) { return w.word })
+      await db.collection('wordlist').doc('main').set({ data: { words: words, updatedAt: db.serverDate() } })
+      result.wordlist = 'created:' + words.length
+    } else {
+      result.wordlist = 'exists:' + ((wl.words || []).length)
+    }
+  } catch (err) {
+    result.wordlist = 'error'
   }
 
   // 压测辅助：分批造数据（kind = posts / comments / notices / reports / feedback）

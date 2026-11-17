@@ -42,9 +42,8 @@ Page({
   onLoad() {
     // 首屏只拉一次列表：关注列表等真正切到「我关注的」时再拉，少一次数据库往返
     this.loadFirst()
-    this.loadHot()
-    this.loadHotTopics()
-    this.loadSiteData()
+    // 热榜/话题/公告/banner/广告合成一次请求（版本号没变还会直接走本地缓存）
+    this.loadHomeMeta(false)
     // 没同意过隐私政策就先弹提示（同意后不再打扰）
     if (!wx.getStorageSync('privacyAgreed')) {
       this.setData({ privacyVisible: true })
@@ -69,18 +68,33 @@ Page({
     }).catch(() => {})
   },
 
-  // 公告 + banner 文案 + 广告位（圈主在管理台发的）
-  loadSiteData() {
-    api.fetchSiteData().then((res) => {
-      const list = (res.announcements || []).slice(0, 3)
-      const ads = (res.ads || []).filter((a) => (a.position || 'home_banner') === 'home_banner').slice(0, 1)
-      this.setData({ announcements: list, bannerText: res.bannerText || '', indexAd: ads[0] || null })
+  // 首页汇总：热榜 + 话题运营位 + 公告 + banner + 广告，一次请求拿全
+  // 服务端返回版本号；没变时直接用上次缓存，页面无感刷新
+  loadHomeMeta(force) {
+    return api.fetchHomeMeta(!!force).then((res) => {
+      const meta = (res && res.meta) || {}
+      const patch = {
+        announcements: meta.announcements || [],
+        bannerText: meta.bannerText || '',
+        indexAd: (meta.ads || [])[0] || null,
+        hotTopics: meta.topics || [],
+      }
+      if (meta.hot && meta.hot.post) {
+        patch.hotPost = meta.hot.post
+        patch.hotIsToday = !!meta.hot.isToday
+      }
+      this.setData(patch)
       // 曝光只报一次（本次启动），点击在 onAdTap 里报
-      if (ads[0] && !this._adViewReported) {
+      if (patch.indexAd && !this._adViewReported) {
         this._adViewReported = true
-        api.reportAd(ads[0].id, 'view')
+        api.reportAd(patch.indexAd.id, 'view')
       }
     }).catch(() => {})
+  },
+
+  // 兼容旧调用：公告/广告已经并进 loadHomeMeta
+  loadSiteData() {
+    return this.loadHomeMeta(false)
   },
 
   // 点广告：上报点击，按配置跳详情/页面，没配就提示
@@ -165,7 +179,7 @@ Page({
       app.globalData.postsDirty = false
       this._cache = {}
       this.loadFollows().then(() => this.loadFirst(true))
-      this.loadHot()
+      this.loadHomeMeta(true)
     } else if (this._shownOnce && this.isFollowTab()) {
       // 从话题页返回：关注状态可能变了，只刷新「我关注的」
       this.loadFollows().then(() => this.loadFirst(true))
@@ -237,19 +251,13 @@ Page({
     })
   },
 
-  // 今日热榜：今天发的帖子里点赞最多的那条（今天还没人发就退回全站最热）
+  // 今日热榜 / 话题运营位：已经并进 loadHomeMeta，保留旧方法名兼容
   loadHot() {
-    api.fetchHotPost().then((res) => {
-      const post = res && res.post
-      if (post) this.setData({ hotPost: post, hotIsToday: !!res.isToday })
-    }).catch(() => {})
+    return this.loadHomeMeta(false)
   },
 
-  // 热门话题运营位：最近 200 条帖子按标签计数，取前 6 个
   loadHotTopics() {
-    api.fetchHotTopics(6).then((list) => {
-      this.setData({ hotTopics: list || [] })
-    }).catch(() => {})
+    return this.loadHomeMeta(false)
   },
 
   // 上拉加载下一页（「我关注的」只取一页，不做分页）
@@ -280,7 +288,9 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.loadFirst(true).then(() => this.loadHot()).then(() => wx.stopPullDownRefresh())
+    this.loadFirst(true)
+      .then(() => this.loadHomeMeta(true))
+      .then(() => wx.stopPullDownRefresh())
   },
 
   onTabTap(e) {

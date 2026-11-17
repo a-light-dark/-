@@ -6,6 +6,20 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
+// 内容版本号 +1：小程序靠它判断「首页数据变了没」，没变就不用重拉
+async function bumpContentVersion() {
+  try {
+    await db.collection('meta').doc('versions').update({
+      data: { content: db.command.inc(1), updatedAt: db.serverDate() },
+    })
+  } catch (err) {
+    try {
+      await db.collection('meta').doc('versions').set({ data: { content: 1, ads: 0, config: 0, updatedAt: db.serverDate() } })
+    } catch (e) {}
+  }
+}
+
+
 // 删云存储里的图片（失败只记日志，不影响删帖结果）
 async function removeFiles(fileIDs) {
   const list = (fileIDs || [])
@@ -56,5 +70,6 @@ exports.main = async (event) => {
   // 最后删云存储里的图，避免存储里堆没人引用的文件
   const fileCount = await removeFiles(images)
 
+  await bumpContentVersion()
   return { ok: true, filesRemoved: fileCount }
 }

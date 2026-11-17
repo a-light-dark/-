@@ -463,6 +463,50 @@ function reportAd(id, type) {
     })
 }
 
+// 首页汇总：热榜 + 话题运营位 + 公告 + banner + 广告，一次请求拿全。
+// 服务端带版本号（meta.versions）回来：没变就直接用本地缓存，连数据库都不读。
+function fetchHomeMeta(force) {
+  const empty = { hot: null, topics: [], announcements: [], bannerText: '', ads: [] }
+  const cached = wx.getStorageSync('homeMeta') || null
+  if (!cloudReady()) {
+    return Promise.resolve({ unchanged: true, meta: (cached && cached.meta) || empty })
+  }
+  return wx.cloud
+    .callFunction({
+      name: 'siteData',
+      data: { action: 'homeMeta', force: !!force, versions: (cached && cached.versions) || null },
+    })
+    .then(function (r) {
+      const res = (r && r.result) || {}
+      if (res.unchanged && cached) return { unchanged: true, meta: cached.meta }
+      if (!res.ok) throw new Error(res.msg || '首页数据加载失败')
+      const topics = (res.topics || []).map(function (t) {
+        const m = topicMeta(t.tag)
+        return { tag: t.tag, emoji: m.emoji, desc: m.desc, count: t.count }
+      })
+      const hot = res.hot && res.hot.post ? { post: normalizePost(res.hot.post), isToday: !!res.hot.isToday } : null
+      return resolveAdImages(res.ads || []).then(function (ads) {
+        const meta = {
+          hot: hot,
+          topics: topics,
+          announcements: (res.announcements || []).slice(0, 3),
+          bannerText: res.bannerText || '',
+          ads: ads
+            .filter(function (a) {
+              return (a.position || 'home_banner') === 'home_banner'
+            })
+            .slice(0, 1),
+        }
+        wx.setStorageSync('homeMeta', { versions: res.versions || null, meta: meta })
+        return { unchanged: false, meta: meta }
+      })
+    })
+    .catch(function (err) {
+      if (cached && cached.meta) return { unchanged: true, meta: cached.meta }
+      throw err
+    })
+}
+
 
 function fetchHotTopics(limit) {  const n = limit || 6
   function countFrom(posts) {
@@ -1786,6 +1830,7 @@ module.exports = {
   fetchWeeklyHot: fetchWeeklyHot,
   fetchSiteData: fetchSiteData,
   reportAd: reportAd,
+  fetchHomeMeta: fetchHomeMeta,
   fetchHotTopics: fetchHotTopics,
   fetchActiveUsers: fetchActiveUsers,
   TOPIC_LIST: TOPIC_LIST,

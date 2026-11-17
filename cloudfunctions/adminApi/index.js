@@ -24,15 +24,24 @@ function isOwner(openid) {
   return ADMIN_OPENIDS[0] === openid
 }
 
+// token → {username, role} 的内存缓存（60 秒），省掉每次管理操作都查一次 admin_sessions
+const tokenCache = new Map()
+
 // Web 后台登录态：admin_sessions 里的 token（有效期 7 天），session 里带角色
 async function resolveToken(token) {
   if (!token) return null
+  const key = String(token)
+  const hit = tokenCache.get(key)
+  if (hit && hit.until > Date.now()) return { username: hit.username, role: hit.role }
   try {
-    const res = await db.collection('admin_sessions').where({ token: String(token) }).limit(1).get()
+    const res = await db.collection('admin_sessions').where({ token: key }).limit(1).get()
     const s = (res.data || [])[0]
     if (!s) return null
-    if (Number(s.expiresAt || 0) < Date.now()) return null
-    return { username: s.username || 'admin', role: s.role || 'admin' }
+    const exp = Number(s.expiresAt || 0)
+    if (exp < Date.now()) return null
+    const actor = { username: s.username || 'admin', role: s.role || 'admin' }
+    tokenCache.set(key, { username: actor.username, role: actor.role, until: Math.min(exp, Date.now() + 60000) })
+    return actor
   } catch (err) {
     return null
   }
@@ -437,6 +446,36 @@ async function purgeTrash(id) {
     return { ok: false, msg: '这条回收站记录不存在了' }
   }
   return { ok: true }
+}
+
+// 词库汇总文档（内容入口只读这一份，读 1 次顶 200 条；词改成偶尔重建）
+async function syncWordlist() {
+  try {
+    const r = await db.collection('wordfilters').limit(200).get()
+    const words = (r.data || [])
+      .map(function (w) { return { id: w._id, word: String(w.word || '') } })
+      .filter(function (w) { return w.word })
+    try {
+      await db.collection('wordlist').doc('main').set({ data: { words: words, updatedAt: db.serverDate() } })
+    } catch (err) {
+      console.warn('同步词库失败', err && err.errCode)
+    }
+  } catch (err) {
+    console.warn('读词库失败', err && err.errCode)
+  }
+}
+
+// 配置版本（公告/banner/广告变了就 +1，首页接口据此决定要不要重算）
+async function bumpConfigVersion() {
+  try {
+    await db.collection('meta').doc('versions').update({
+      data: { config: db.command.inc(1), ads: db.command.inc(1), updatedAt: db.serverDate() },
+    })
+  } catch (err) {
+    try {
+      await db.collection('meta').doc('versions').set({ data: { content: 0, ads: 1, config: 1, updatedAt: db.serverDate() } })
+    } catch (e) {}
+  }
 }
 
 // ============ 敏感词库 ============
@@ -1372,6 +1411,7 @@ exports.main = async (event) => {
       case 'announcements.create':
         res = await announcementSave(event, false)
         if (res.ok) await audit('announcements.create', 'announcement', res.id, event.title || '')
+        await bumpConfigVersion()
         break
       case 'announcements.update':
         res = await announcementSave(event, true)
@@ -1407,11 +1447,17 @@ exports.main = async (event) => {
         break
       case 'wordfilters.add':
         res = await wordsAdd(event.word)
-        if (res.ok) await audit('wordfilters.add', 'wordfilter', res.id, event.word || '')
+        if (res.ok) {
+          await syncWordlist()
+          await audit('wordfilters.add', 'wordfilter', res.id, event.word || '')
+        }
         break
       case 'wordfilters.remove':
         res = await wordsRemove(event.id)
-        if (res.ok) await audit('wordfilters.remove', 'wordfilter', event.id, '')
+        if (res.ok) {
+          await syncWordlist()
+          await audit('wordfilters.remove', 'wordfilter', event.id, '')
+        }
         break
       case 'backup.create':
         res = await backupCreate()
