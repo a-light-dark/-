@@ -13,6 +13,13 @@
         <el-menu-item index="/dashboard">📊 工作台</el-menu-item>
         <el-menu-item index="/reports">🚩 举报处理</el-menu-item>
         <el-menu-item index="/posts">📝 帖子管理</el-menu-item>
+        <el-menu-item index="/users">👥 用户管理</el-menu-item>
+        <el-menu-item index="/feedback">💬 建议反馈</el-menu-item>
+        <el-menu-item index="/announcements">📢 公告管理</el-menu-item>
+        <el-menu-item index="/settings">⚙️ 运营配置</el-menu-item>
+        <el-menu-item index="/trash">🗑️ 回收站</el-menu-item>
+        <el-menu-item index="/words">🚫 敏感词库</el-menu-item>
+        <el-menu-item index="/backup">💾 数据备份</el-menu-item>
       </el-menu>
       <div class="aside-foot">
         <span v-if="isMock" class="mock-flag">演示模式</span>

@@ -3,6 +3,13 @@ import Login from './views/Login.vue'
 import Dashboard from './views/Dashboard.vue'
 import Reports from './views/Reports.vue'
 import Posts from './views/Posts.vue'
+import Users from './views/Users.vue'
+import Feedback from './views/Feedback.vue'
+import Announcements from './views/Announcements.vue'
+import Settings from './views/Settings.vue'
+import Trash from './views/Trash.vue'
+import Words from './views/Words.vue'
+import Backup from './views/Backup.vue'
 import { getToken } from './api.js'
 
 const router = createRouter({
@@ -14,6 +21,13 @@ const router = createRouter({
     { path: '/dashboard', component: Dashboard, meta: { title: '工作台' } },
     { path: '/reports', component: Reports, meta: { title: '举报处理' } },
     { path: '/posts', component: Posts, meta: { title: '帖子管理' } },
+    { path: '/users', component: Users, meta: { title: '用户管理' } },
+    { path: '/feedback', component: Feedback, meta: { title: '建议反馈' } },
+    { path: '/announcements', component: Announcements, meta: { title: '公告管理' } },
+    { path: '/settings', component: Settings, meta: { title: '运营配置' } },
+    { path: '/trash', component: Trash, meta: { title: '回收站' } },
+    { path: '/words', component: Words, meta: { title: '敏感词库' } },
+    { path: '/backup', component: Backup, meta: { title: '数据备份' } },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 })

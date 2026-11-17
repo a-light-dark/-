@@ -91,3 +91,34 @@ export const unbanUser = (openid) => callAdmin('users.unban', { openid })
 
 export const fetchFeedback = (page = 1, pageSize = 20) => callAdmin('feedback.list', { page, pageSize })
 export const resolveFeedback = (id) => callAdmin('feedback.resolve', { id })
+export const removeFeedback = (id) => callAdmin('feedback.remove', { id })
+
+export const setUserRole = (openid, role) => callAdmin('users.setRole', { openid, role })
+
+export const fetchAnnouncements = () => callAdmin('announcements.list')
+export const createAnnouncement = (payload) => callAdmin('announcements.create', payload)
+export const updateAnnouncement = (payload) => callAdmin('announcements.update', payload)
+export const removeAnnouncement = (id) => callAdmin('announcements.remove', { id })
+
+export const fetchSettings = () => callAdmin('settings.get')
+export const saveSetting = (key, value) => callAdmin('settings.set', { key, value })
+export const fetchAudit = (page = 1, pageSize = 20) => callAdmin('audit.list', { page, pageSize })
+
+export const fetchTrash = (page = 1, pageSize = 20) => callAdmin('trash.list', { page, pageSize })
+export const restoreTrash = (id, type) => callAdmin('trash.restore', { id, type })
+export const purgeTrash = (id, type) => callAdmin('trash.purge', { id, type })
+
+export const fetchWords = () => callAdmin('wordfilters.list')
+export const addWord = (word) => callAdmin('wordfilters.add', { word })
+export const removeWord = (id) => callAdmin('wordfilters.remove', { id })
+
+export const fetchBackups = () => callAdmin('backup.list')
+export const createBackup = () => callAdmin('backup.create')
+export const downloadBackup = (id) => callAdmin('backup.download', { id })
+export const removeBackup = (id) => callAdmin('backup.remove', { id })
+
+export const fetchIsAdmin = () => callAdmin('isAdmin')
+
+export async function changePassword(oldPassword, newPassword) {
+  return invoke('adminLogin', { action: 'changePassword', token: getToken(), oldPassword, newPassword })
+}

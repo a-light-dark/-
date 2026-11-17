@@ -157,4 +157,5 @@ audit.list         → 操作日志分页
 - 已完成：`adminLogin` 云函数（账号密码 → token，sha256 存 settings，token 存 admin_sessions，7 天过期；支持 logout / whoami / changePassword）；`adminApi` 支持 token 鉴权（网页 token 或小程序 openid 二选一）。
 - 已完成：`admin/web/`（Vue 3 + Vite + Element Plus）——登录 / 工作台 / 举报处理 / 帖子管理，列表统一 20 条分页，删除走回收站。
 - 已完成：演示模式（`VITE_MOCK=true`）与生产构建（`npm run build` → `dist/`），可直接上传云开发静态托管。
-- 待做：用户管理 / 反馈 / 公告 / 配置 / 回收站 / 敏感词 / 备份 页面（接口都在 adminApi，补页面即可）；改密码 UI；token 自动续期。
+- 已完成：用户管理 / 建议反馈 / 公告管理 / 运营配置（含改密码 + 操作日志）/ 回收站 / 敏感词库 / 数据备份（共 10 个页面）。
+- 待做：token 自动续期；备份的一键恢复（目前是导出 JSON，恢复需人工或脚本）。
