@@ -159,3 +159,11 @@ audit.list         → 操作日志分页
 - 已完成：演示模式（`VITE_MOCK=true`）与生产构建（`npm run build` → `dist/`），可直接上传云开发静态托管。
 - 已完成：用户管理 / 建议反馈 / 公告管理 / 运营配置（含改密码 + 操作日志）/ 回收站 / 敏感词库 / 数据备份（共 10 个页面）。
 - 待做：token 自动续期；备份的一键恢复（目前是导出 JSON，恢复需人工或脚本）。
+
+## M3.5 身份与权限（RBAC + 审核）
+
+- 角色：owner / developer / admin / operator / analyst；账号 `admin_accounts`，会话 `admin_sessions`（带 role）。
+- 入口统一 `allowRole(role, action)`；小程序端沿用 openid 白名单 + `users.role`。
+- 开发者写操作写 `approvals`（payload + action），返回 pending；管理员 `approvals.approve` 时服务端重放（_fromApproval 防递归），状态 executed/failed。
+- 审计加 by/role；`posts.trace` 按 targetId 追溯。
+- Web：Accounts.vue（圈主）、Approvals.vue（圈主/管理员），菜单按角色过滤，演示模式支持 ?role=analyst。

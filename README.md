@@ -552,3 +552,12 @@ $env:VITE_MOCK='true'; npm run dev   # Windows PowerShell
 
 > 云函数 20 个（多了 `adminLogin`），集合 19 个（多了 `admin_sessions`）。
 
+
+### 管理后台的身份与权限（RBAC）
+
+- 5 种身份：圈主 owner / 开发者 developer / 管理员 admin / 运营 operator / 数据分析员 analyst。
+- 账号存在 `admin_accounts`，登录后 token 存在 `admin_sessions`（带角色，7 天）。
+- 开发者的修改类操作不会直接执行，会先生成 `approvals` 待审核，管理员/圈主点通过后由服务端重放执行。
+- 运营可删帖/删评论/处理举报、管理公告与敏感词，并通过 `posts.trace` 追溯某条帖子的操作记录。
+- 数据分析员只读，任何写操作都会被云函数拒绝。
+- 网页「账号管理」「修改审核」分别只对圈主、圈主+管理员+开发者开放。
