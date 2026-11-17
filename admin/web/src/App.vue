@@ -49,6 +49,8 @@ const me = reactive({ username: '', role: '', roleLabel: '' })
 // 角色 → 能看哪些菜单
 const MENUS = [
   { path: '/dashboard', icon: '📊', label: '工作台', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/analytics', icon: '📈', label: '流量看板', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/ads', icon: '🏷️', label: '广告管理', roles: ['owner', 'developer', 'admin', 'operator'] },
   { path: '/reports', icon: '🚩', label: '举报处理', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
   { path: '/posts', icon: '📝', label: '帖子管理', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
   { path: '/users', icon: '👥', label: '用户管理', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },

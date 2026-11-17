@@ -58,14 +58,15 @@ const MUTATIONS = [
   'users.ban', 'users.unban', 'users.setRole', 'feedback.resolve', 'feedback.remove',
   'announcements.create', 'announcements.update', 'announcements.remove', 'settings.set',
   'trash.restore', 'trash.purge', 'wordfilters.add', 'wordfilters.remove',
+  'ads.save', 'ads.remove', 'ads.toggle',
   'backup.create', 'backup.remove',
   'accounts.create', 'accounts.setRole', 'accounts.setPassword', 'accounts.setActive', 'accounts.remove',
   'approvals.approve', 'approvals.reject',
 ]
 
-const OPERATOR_READ = ['dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'audit.list', 'trash.list', 'wordfilters.list', 'posts.trace']
-const OPERATOR_WRITE = ['posts.remove', 'posts.setTop', 'comments.remove', 'reports.dismiss', 'reports.removePost', 'feedback.resolve', 'announcements.create', 'announcements.update', 'announcements.remove', 'wordfilters.add', 'wordfilters.remove']
-const ANALYST_READ = ['dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'trash.list', 'wordfilters.list']
+const OPERATOR_READ = ['dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'audit.list', 'trash.list', 'wordfilters.list', 'posts.trace', 'analytics.overview', 'ads.list']
+const OPERATOR_WRITE = ['posts.remove', 'posts.setTop', 'comments.remove', 'reports.dismiss', 'reports.removePost', 'feedback.resolve', 'announcements.create', 'announcements.update', 'announcements.remove', 'wordfilters.add', 'wordfilters.remove', 'ads.save', 'ads.remove', 'ads.toggle']
+const ANALYST_READ = ['dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'trash.list', 'wordfilters.list', 'analytics.overview', 'ads.list']
 
 function allowRole(role, action) {
   if (!role) return false
@@ -444,7 +445,7 @@ async function wordsList() {
   return {
     ok: true,
     list: (res.data || []).map(function (w) {
-      return { id: w._id, word: w.word, createdAt: ts(w.createdAt) }
+      return { id: w._id, word: w.word, hits: Number(w.hits || 0), lastHitAt: ts(w.lastHitAt), createdAt: ts(w.createdAt) }
     }),
     total: (res.data || []).length,
   }
@@ -1043,6 +1044,199 @@ async function approvalReject(id, reason) {
   return { ok: true }
 }
 
+// ============ 流量看板（内容与互动数据） ============
+function dayStart(d) {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x.getTime()
+}
+
+async function grabRecent(col, limit) {
+  try {
+    const r = await db.collection(col).orderBy('createdAt', 'desc').limit(limit).get()
+    return r.data || []
+  } catch (err) {
+    return []
+  }
+}
+
+async function analyticsOverview(event) {
+  const days = Math.min(30, Math.max(7, Number(event.days) || 7))
+  const now = Date.now()
+  const today0 = dayStart(now)
+  const from = today0 - (days - 1) * 86400000
+  const packs = await Promise.all([
+    grabRecent('posts', 1000),
+    grabRecent('comments', 1000),
+    grabRecent('users', 1000),
+    grabRecent('likes', 1000),
+    grabRecent('orders', 1000),
+  ])
+  const posts = packs[0]
+  const comments = packs[1]
+  const users = packs[2]
+  const likes = packs[3]
+  const orders = packs[4]
+  const series = []
+  for (let i = 0; i < days; i++) {
+    const start = from + i * 86400000
+    const end = start + 86400000
+    const bucket = { day: new Date(start).toISOString().slice(5, 10), posts: 0, comments: 0, users: 0 }
+    posts.forEach(function (p) {
+      const t = ts(p.createdAt)
+      if (t >= start && t < end) bucket.posts++
+    })
+    comments.forEach(function (c) {
+      const t = ts(c.createdAt)
+      if (t >= start && t < end) bucket.comments++
+    })
+    users.forEach(function (u) {
+      const t = ts(u.createdAt)
+      if (t >= start && t < end) bucket.users++
+    })
+    series.push(bucket)
+  }
+  const today = {
+    posts: posts.filter(function (p) { return ts(p.createdAt) >= today0 }).length,
+    comments: comments.filter(function (c) { return ts(c.createdAt) >= today0 }).length,
+    users: users.filter(function (u) { return ts(u.createdAt) >= today0 }).length,
+  }
+  let totalViews = 0
+  posts.forEach(function (p) { totalViews += Number(p.views || 0) })
+  const active = {}
+  posts.concat(comments).forEach(function (d) {
+    if (d._openid && ts(d.createdAt) >= from) active[d._openid] = 1
+  })
+  const tagCount = {}
+  posts.forEach(function (p) {
+    ;(p.tags || []).forEach(function (t) { tagCount[t] = (tagCount[t] || 0) + 1 })
+  })
+  const topics = Object.keys(tagCount)
+    .map(function (t) { return { tag: t, count: tagCount[t] } })
+    .sort(function (a, b) { return b.count - a.count })
+    .slice(0, 6)
+  const brief = function (p) {
+    return {
+      id: p._id,
+      content: String(p.content || '').slice(0, 40),
+      nickname: p.nickname || '',
+      views: Number(p.views || 0),
+      likes: Number(p.likeCount || 0),
+      comments: Number(p.commentCount || 0),
+    }
+  }
+  const topPosts = posts.slice().sort(function (a, b) { return Number(b.views || 0) - Number(a.views || 0) }).slice(0, 5).map(brief)
+  const topLiked = posts.slice().sort(function (a, b) { return Number(b.likeCount || 0) - Number(a.likeCount || 0) }).slice(0, 5).map(brief)
+  return {
+    ok: true,
+    days: days,
+    totals: {
+      users: users.length,
+      posts: posts.length,
+      comments: comments.length,
+      likes: likes.length,
+      orders: orders.length,
+      views: totalViews,
+    },
+    today: today,
+    activeUsers: Object.keys(active).length,
+    series: series,
+    topics: topics,
+    topPosts: topPosts,
+    topLiked: topLiked,
+  }
+}
+
+// ============ 广告位（首页 banner / 详情页底部）============
+const AD_POSITIONS = ['home_banner', 'detail_bottom']
+const AD_LINK_TYPES = ['none', 'post', 'page']
+
+async function adsList() {
+  try {
+    const res = await db.collection('ads').orderBy('createdAt', 'desc').limit(100).get()
+    return {
+      ok: true,
+      total: (res.data || []).length,
+      list: (res.data || []).map(function (a) {
+        return {
+          id: a._id,
+          title: a.title || '',
+          image: a.image || '',
+          position: a.position || 'home_banner',
+          linkType: a.linkType || 'none',
+          linkValue: a.linkValue || '',
+          enabled: a.enabled !== false,
+          weight: Number(a.weight || 0),
+          startAt: ts(a.startAt),
+          endAt: ts(a.endAt),
+          views: Number(a.views || 0),
+          clicks: Number(a.clicks || 0),
+          createdAt: ts(a.createdAt),
+        }
+      }),
+    }
+  } catch (err) {
+    return { ok: true, total: 0, list: [], msg: 'ads 集合还没建，先运行 setupCollections' }
+  }
+}
+
+function adPayload(event) {
+  const title = String(event.title || '').trim()
+  const image = String(event.image || '').trim()
+  const position = AD_POSITIONS.indexOf(event.position) > -1 ? event.position : 'home_banner'
+  const linkType = AD_LINK_TYPES.indexOf(event.linkType) > -1 ? event.linkType : 'none'
+  const linkValue = String(event.linkValue || '').trim()
+  const weight = Math.min(100, Math.max(0, Number(event.weight) || 0))
+  const startAt = Number(event.startAt) || 0
+  const endAt = Number(event.endAt) || 0
+  const enabled = event.enabled !== false
+  return { title: title, image: image, position: position, linkType: linkType, linkValue: linkValue, weight: weight, startAt: startAt, endAt: endAt, enabled: enabled }
+}
+
+async function adsSave(event) {
+  const p = adPayload(event)
+  if (!p.title) return { ok: false, msg: '标题不能为空' }
+  if (!p.image) return { ok: false, msg: '图片地址不能为空' }
+  if (p.linkType === 'post' && !p.linkValue) return { ok: false, msg: '跳转帖子请填帖子 id' }
+  if (p.linkType === 'page' && !p.linkValue) return { ok: false, msg: '跳转页面请填页面路径' }
+  try {
+    if (event.id) {
+      await db.collection('ads').doc(String(event.id)).update({
+        data: Object.assign({}, p, { updatedAt: db.serverDate() }),
+      })
+      return { ok: true, id: String(event.id) }
+    }
+    const added = await db.collection('ads').add({
+      data: Object.assign({}, p, { views: 0, clicks: 0, createdAt: db.serverDate(), updatedAt: db.serverDate() }),
+    })
+    return { ok: true, id: added._id }
+  } catch (err) {
+    return { ok: false, msg: '保存失败：' + ((err && err.errMsg) || '未知错误') }
+  }
+}
+
+async function adsRemove(id) {
+  if (!id) return { ok: false, msg: '缺少广告 id' }
+  try {
+    await db.collection('ads').doc(String(id)).remove()
+  } catch (err) {
+    return { ok: false, msg: '这条广告不存在了' }
+  }
+  return { ok: true }
+}
+
+async function adsToggle(event) {
+  if (!event.id) return { ok: false, msg: '缺少广告 id' }
+  try {
+    await db.collection('ads').doc(String(event.id)).update({
+      data: { enabled: event.enabled !== false, updatedAt: db.serverDate() },
+    })
+  } catch (err) {
+    return { ok: false, msg: '这条广告不存在了' }
+  }
+  return { ok: true }
+}
+
 // ============ exports.main ============
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -1232,6 +1426,24 @@ exports.main = async (event) => {
       case 'backup.remove':
         res = await backupRemove(event.id)
         if (res.ok) await audit('backup.remove', 'backup', event.id, '')
+        break
+      case 'analytics.overview':
+        res = await analyticsOverview(event)
+        break
+      case 'ads.list':
+        res = await adsList()
+        break
+      case 'ads.save':
+        res = await adsSave(event)
+        if (res.ok) await audit('ads.save', 'ad', res.id, event.title || '')
+        break
+      case 'ads.remove':
+        res = await adsRemove(event.id)
+        if (res.ok) await audit('ads.remove', 'ad', event.id, '')
+        break
+      case 'ads.toggle':
+        res = await adsToggle(event)
+        if (res.ok) await audit('ads.toggle', 'ad', event.id, event.enabled === false ? 'off' : 'on')
         break
       case 'posts.trace':
         res = await auditList({ targetId: event.postId, page: event.page, pageSize: event.pageSize })

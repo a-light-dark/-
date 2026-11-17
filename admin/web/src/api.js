@@ -145,3 +145,13 @@ export const approveApproval = (id) => callAdmin('approvals.approve', { id })
 export const rejectApproval = (id, reason = '') => callAdmin('approvals.reject', { id, reason })
 
 export const tracePost = (postId, page = 1, pageSize = 20) => callAdmin('posts.trace', { postId, page, pageSize })
+
+// 流量看板（内容与互动数据）
+export const fetchAnalytics = (days = 7) => callAdmin('analytics.overview', { days })
+
+// 广告位（首页 banner / 详情页底部）
+export const fetchAds = () => callAdmin('ads.list')
+export const saveAd = (payload) => callAdmin('ads.save', payload)
+export const removeAd = (id) => callAdmin('ads.remove', { id })
+export const toggleAd = (id, enabled) => callAdmin('ads.toggle', { id, enabled })
+

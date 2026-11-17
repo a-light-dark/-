@@ -70,8 +70,86 @@ const TRASH = Array.from({ length: 6 }, (_, i) => ({
 const WORDS = ['代开发票', '包过', '刷单', '加微信', '贷款', '博彩'].map((word, i) => ({
   id: 'word_' + i,
   word,
+  hits: [7, 2, 0, 12, 0, 1][i] || 0,
+  lastHitAt: [now - 3600000 * 2, now - 86400000, 0, now - 3600000 * 5, 0, now - 86400000 * 2][i] || 0,
   createdAt: now - i * 86400 * 1000,
 }))
+
+const ADS = [
+  {
+    id: 'ad_0',
+    title: '双十一驾校体验活动',
+    image: 'https://picsum.photos/seed/campus-ad/750/300',
+    position: 'home_banner',
+    linkType: 'page',
+    linkValue: '/pages/topic/topic?tag=日常投稿',
+    weight: 10,
+    enabled: true,
+    startAt: 0,
+    endAt: 0,
+    views: 1260,
+    clicks: 84,
+    createdAt: now - 86400000 * 3,
+  },
+  {
+    id: 'ad_1',
+    title: '开学季手机卡 19 元套餐',
+    image: 'https://picsum.photos/seed/campus-ad2/750/300',
+    position: 'home_banner',
+    linkType: 'none',
+    linkValue: '',
+    weight: 0,
+    enabled: false,
+    startAt: now - 86400000 * 2,
+    endAt: now + 86400000 * 5,
+    views: 320,
+    clicks: 6,
+    createdAt: now - 86400000 * 2,
+  },
+]
+
+const ANALYTICS = (function () {
+  const days = 7
+  const series = Array.from({ length: days }, function (_, i) {
+    const d = new Date(now - (days - 1 - i) * 86400000)
+    return {
+      day: String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
+      posts: [3, 0, 2, 5, 1, 4, 2][i] || 0,
+      comments: [2, 1, 4, 3, 0, 6, 2][i] || 0,
+      users: [1, 0, 0, 2, 0, 1, 0][i] || 0,
+    }
+  })
+  return {
+    ok: true,
+    days: days,
+    totals: {
+      users: USERS.length,
+      posts: POSTS.length,
+      comments: 12,
+      likes: 8,
+      orders: 5,
+      views: POSTS.reduce(function (a, p) { return a + (p.views || 0) }, 0),
+    },
+    today: { posts: 2, comments: 2, users: 0 },
+    activeUsers: 4,
+    series: series,
+    topics: [
+      { tag: '日常投稿', count: 9 },
+      { tag: '树洞', count: 5 },
+      { tag: '新鲜事', count: 4 },
+      { tag: '二手', count: 2 },
+    ],
+    topPosts: POSTS.slice()
+      .sort(function (a, b) { return b.views - a.views })
+      .slice(0, 5)
+      .map(function (p) { return { id: p.id, content: p.content, nickname: p.nickname, views: p.views, likes: p.likeCount, comments: p.commentCount } }),
+    topLiked: POSTS.slice()
+      .sort(function (a, b) { return b.likeCount - a.likeCount })
+      .slice(0, 5)
+      .map(function (p) { return { id: p.id, content: p.content, nickname: p.nickname, views: p.views, likes: p.likeCount, comments: p.commentCount } }),
+  }
+})()
+
 
 const BACKUPS = Array.from({ length: 2 }, (_, i) => ({
   id: 'backup_' + i,
@@ -229,6 +307,29 @@ export function mockCall(name, data) {
 
   if (action === 'posts.trace') {
     return page(AUDIT.filter((x) => String(x.targetId || '').indexOf(String(d.postId || '')) > -1), d.page, d.pageSize)
+  }
+
+  if (action === 'analytics.overview') return ANALYTICS
+  if (action === 'ads.list') return { ok: true, list: ADS, total: ADS.length }
+  if (action === 'ads.save') {
+    if (d.id) {
+      const a = ADS.find((x) => x.id === d.id)
+      if (a) Object.assign(a, d, { id: a.id })
+      return { ok: true, id: d.id }
+    }
+    const id = 'ad_new_' + Date.now()
+    ADS.unshift(Object.assign({}, d, { id: id, views: 0, clicks: 0, createdAt: Date.now() }))
+    return { ok: true, id: id }
+  }
+  if (action === 'ads.remove') {
+    const i = ADS.findIndex((x) => x.id === d.id)
+    if (i > -1) ADS.splice(i, 1)
+    return { ok: true }
+  }
+  if (action === 'ads.toggle') {
+    const a = ADS.find((x) => x.id === d.id)
+    if (a) a.enabled = d.enabled !== false
+    return { ok: true }
   }
 
   if (action === 'backup.download') {

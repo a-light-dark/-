@@ -1,4 +1,4 @@
-﻿// utils/api.js —— 数据层
+// utils/api.js —— 数据层
 // 页面只调用这里的函数：云开发可用时读写云数据库，不可用时自动退回本地演示数据
 const mock = require('./mock.js')
 const format = require('./format.js')
@@ -393,21 +393,76 @@ function topicMeta(name) {
   return { name: name, emoji: '#', desc: '这个话题下的帖子' }
 }
 
-// 热门话题：统计最近 200 条帖子的标签，按出现次数排。首页顶部「运营位」用。
-// 首页公开数据：公告 + banner 文案（由 siteData 云函数代读，普通用户读不到那两个集合）
-function fetchSiteData() {
-  if (!cloudReady()) {
-    return Promise.resolve({ ok: true, announcements: [], bannerText: '' })
+// 首页公开数据：公告 + banner 文案 + 广告位（由 siteData 云函数代读，普通用户读不到那几个集合）
+function normalizeAd(a) {
+  const image = String((a && a.image) || '')
+  return {
+    id: String((a && (a.id || a._id)) || ''),
+    title: String((a && a.title) || ''),
+    image: image,
+    imageIsCloud: image.indexOf('cloud://') === 0,
+    position: String((a && a.position) || 'home_banner'),
+    linkType: String((a && a.linkType) || 'none'),
+    linkValue: String((a && a.linkValue) || ''),
   }
+}
+
+// 广告图如果是云存储 fileID，换成临时 https 链接，<image> 能直接显示
+function resolveAdImages(list) {
+  const items = (list || []).map(normalizeAd)
+  const cloudOnes = items.filter(function (a) { return a.imageIsCloud })
+  if (!cloudOnes.length || !cloudReady()) return Promise.resolve(items)
+  return wx.cloud
+    .getTempFileURL({ fileList: cloudOnes.map(function (a) { return a.image }) })
+    .then(function (res) {
+      const map = {}
+      ;((res && res.fileList) || []).forEach(function (f) {
+        if (f && f.fileID) map[f.fileID] = f.tempFileURL || f.fileID
+      })
+      return items.map(function (a) {
+        if (a.imageIsCloud && map[a.image]) a.image = map[a.image]
+        return a
+      })
+    })
+    .catch(function () {
+      return items
+    })
+}
+
+function fetchSiteData() {
+  const empty = { ok: true, announcements: [], bannerText: '', ads: [] }
+  if (!cloudReady()) return Promise.resolve(empty)
   return wx.cloud
     .callFunction({ name: 'siteData', data: {} })
     .then(function (r) {
-      return r && r.result ? r.result : { ok: true, announcements: [], bannerText: '' }
+      const res = (r && r.result) || empty
+      return resolveAdImages(res.ads || []).then(function (ads) {
+        return {
+          ok: true,
+          announcements: res.announcements || [],
+          bannerText: res.bannerText || '',
+          ads: ads,
+        }
+      })
     })
     .catch(function () {
-      return { ok: true, announcements: [], bannerText: '' }
+      return empty
     })
 }
+
+// 广告曝光/点击上报（失败不影响用户看内容）
+function reportAd(id, type) {
+  if (!id || !cloudReady()) return Promise.resolve({ ok: false })
+  return wx.cloud
+    .callFunction({ name: 'siteData', data: { action: 'adReport', id: String(id), type: type === 'click' ? 'click' : 'view' } })
+    .then(function (r) {
+      return (r && r.result) || { ok: true }
+    })
+    .catch(function () {
+      return { ok: false }
+    })
+}
+
 
 function fetchHotTopics(limit) {  const n = limit || 6
   function countFrom(posts) {
@@ -1730,6 +1785,7 @@ module.exports = {
   incView: incView,
   fetchWeeklyHot: fetchWeeklyHot,
   fetchSiteData: fetchSiteData,
+  reportAd: reportAd,
   fetchHotTopics: fetchHotTopics,
   fetchActiveUsers: fetchActiveUsers,
   TOPIC_LIST: TOPIC_LIST,

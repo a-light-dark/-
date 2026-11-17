@@ -56,6 +56,16 @@
     </view>
   </view>
 
+  <!-- 首页广告位（管理台 → 广告管理 → 位置：首页 banner） -->
+  <view class="ad-card" wx:if="{{indexAd}}" hover-class="ad-hover" bindtap="onAdTap">
+    <image class="ad-img" src="{{indexAd.image}}" mode="aspectFill" lazy-load />
+    <view class="ad-bar">
+      <text class="ad-tag">广告</text>
+      <text class="ad-title">{{indexAd.title}}</text>
+      <text class="ad-go">›</text>
+    </view>
+  </view>
+
   <!-- 热门话题运营位：按最近帖子的话题计数，点进去就是话题页 -->
   <scroll-view class="topic-strip" scroll-x wx:if="{{hotTopics.length}}">
     <view

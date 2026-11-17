@@ -1,13 +1,62 @@
-// 公开数据网关：给所有用户读「公告」和「首页 banner 文案」
-// 说明：announcements / settings 集合权限是「所有用户不可读写」，
+// 公开数据网关：给所有用户读「公告」「首页 banner 文案」「广告位」
+// 说明：announcements / settings / ads 集合权限是「所有用户不可读写」，
 // 普通用户读不到，所以统一由这个云函数代读（服务端有管理员权限）。
 const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
-exports.main = async () => {
-  const out = { ok: true, announcements: [], bannerText: '' }
+function ts(v) {
+  if (!v) return 0
+  const d = new Date(v)
+  return isNaN(d.getTime()) ? Number(v) || 0 : d.getTime()
+}
+
+async function loadAds() {
+  try {
+    const res = await db.collection('ads').where({ enabled: true }).limit(20).get()
+    const now = Date.now()
+    return (res.data || [])
+      .filter(function (a) {
+        const start = ts(a.startAt)
+        const end = ts(a.endAt)
+        return (!start || start <= now) && (!end || end >= now)
+      })
+      .sort(function (a, b) { return Number(b.weight || 0) - Number(a.weight || 0) })
+      .map(function (a) {
+        return {
+          id: a._id,
+          title: a.title || '',
+          image: a.image || '',
+          position: a.position || 'home_banner',
+          linkType: a.linkType || 'none',
+          linkValue: a.linkValue || '',
+        }
+      })
+  } catch (err) {
+    return []
+  }
+}
+
+async function adReport(event) {
+  const id = String(event.id || '')
+  const type = event.type === 'click' ? 'click' : 'view'
+  if (!id) return { ok: false, msg: '缺少广告 id' }
+  try {
+    const data = type === 'click' ? { clicks: _.inc(1) } : { views: _.inc(1) }
+    await db.collection('ads').doc(id).update({ data: data })
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, msg: '广告不存在' }
+  }
+}
+
+exports.main = async (event) => {
+  const action = String((event && event.action) || '')
+  if (action === 'adReport') return adReport(event || {})
+
+  const out = { ok: true, announcements: [], bannerText: '', ads: [] }
   // 圈主在运营配置里可以关掉公告展示（announcementEnabled = false）
   let enabled = true
   try {
@@ -38,5 +87,6 @@ exports.main = async () => {
   } catch (err) {
     // 同上
   }
+  out.ads = await loadAds()
   return out
 }

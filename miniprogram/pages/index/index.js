@@ -32,6 +32,7 @@ Page({
     hotTopics: [],     // 热门话题运营位（按最近帖子标签计数）
     announcements: [], // 圈主发的公告（siteData 代读）
     bannerText: '',    // 圈主在运营配置里设的 banner 文案
+    indexAd: null,     // 首页广告位（管理台 → 广告管理 → 首页 banner）
     loading: false,
     hasMore: true,
     offline: false, // true = 正在用本地演示数据
@@ -68,12 +69,34 @@ Page({
     }).catch(() => {})
   },
 
-  // 公告 + banner 文案（圈主在管理台发的）
+  // 公告 + banner 文案 + 广告位（圈主在管理台发的）
   loadSiteData() {
     api.fetchSiteData().then((res) => {
       const list = (res.announcements || []).slice(0, 3)
-      this.setData({ announcements: list, bannerText: res.bannerText || '' })
+      const ads = (res.ads || []).filter((a) => (a.position || 'home_banner') === 'home_banner').slice(0, 1)
+      this.setData({ announcements: list, bannerText: res.bannerText || '', indexAd: ads[0] || null })
+      // 曝光只报一次（本次启动），点击在 onAdTap 里报
+      if (ads[0] && !this._adViewReported) {
+        this._adViewReported = true
+        api.reportAd(ads[0].id, 'view')
+      }
     }).catch(() => {})
+  },
+
+  // 点广告：上报点击，按配置跳详情/页面，没配就提示
+  onAdTap() {
+    const ad = this.data.indexAd
+    if (!ad) return
+    api.reportAd(ad.id, 'click')
+    if (ad.linkType === 'post' && ad.linkValue) {
+      wx.navigateTo({ url: '/pages/detail/detail?id=' + encodeURIComponent(ad.linkValue) })
+      return
+    }
+    if (ad.linkType === 'page' && ad.linkValue) {
+      wx.navigateTo({ url: ad.linkValue })
+      return
+    }
+    wx.showToast({ title: '广告位展示中', icon: 'none' })
   },
 
   // 点公告看全文

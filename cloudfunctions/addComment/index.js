@@ -61,10 +61,20 @@ async function checkText(content, scene, openid) {
 async function checkWords(content) {
   try {
     const res = await db.collection('wordfilters').limit(200).get()
-    const words = (res.data || []).map(function (w) { return String((w && w.word) || '').trim() }).filter(Boolean)
-    if (!words.length) return { ok: true }
-    const hit = words.find(function (w) { return content.indexOf(w) > -1 })
-    if (hit) return { ok: false, msg: '评论里有不合适的词，换一下再发' }
+    const list = (res.data || []).filter(function (w) { return w && String(w.word || '').trim() })
+    if (!list.length) return { ok: true }
+    const hit = list.find(function (w) { return content.indexOf(String(w.word).trim()) > -1 })
+    if (hit) {
+      // 命中次数给管理台看（失败不影响拦截）
+      try {
+        await db.collection('wordfilters').doc(hit._id).update({
+          data: { hits: db.command.inc(1), lastHitAt: db.serverDate() },
+        })
+      } catch (err) {
+        console.warn('记录敏感词命中失败', err && err.errCode)
+      }
+      return { ok: false, msg: '评论里有不合适的词，换一下再发' }
+    }
     return { ok: true }
   } catch (err) {
     console.warn('读敏感词库失败（先放行）', err && err.errCode)
