@@ -1,0 +1,8 @@
+{
+  "name": "campus-forum",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "check": "node tools/check.js"
+  }
+}
