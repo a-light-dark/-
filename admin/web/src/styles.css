@@ -125,6 +125,15 @@ a {
   object-fit: cover;
 }
 
+.avatar-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: var(--brand-light);
+}
+
 .muted {
   color: var(--muted);
   font-size: 12px;

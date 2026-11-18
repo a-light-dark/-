@@ -717,13 +717,28 @@ async function usersList(event) {
   if (keyword) query = query.where({ nickname: db.RegExp({ regexp: esc(keyword), options: 'i' }) })
   const countRes = await query.count()
   const listRes = await query.orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
+  const rows = listRes.data || []
+  // 头像存的是 cloud:// 文件 ID，网页直接显示会变成一长串路径，换成临时链接
+  const files = rows.map(function (u) { return u.avatar }).filter(function (a) { return a && String(a).indexOf('cloud://') === 0 })
+  const urlMap = {}
+  if (files.length) {
+    try {
+      const r = await cloud.getTempFileURL({ fileList: files })
+      ;(r.fileList || []).forEach(function (f) {
+        if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL
+      })
+    } catch (err) {
+      console.warn('用户头像临时链接失败', err && err.errCode)
+    }
+  }
   return {
     ok: true,
-    list: (listRes.data || []).map(function (u) {
+    list: rows.map(function (u) {
       return {
         openid: u._openid || '',
         nickname: u.nickname,
         avatar: u.avatar,
+        avatarUrl: urlMap[u.avatar] || '',
         banned: u.banned === true,
         banReason: u.banReason || '',
         role: u.role || '',

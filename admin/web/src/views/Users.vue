@@ -15,7 +15,8 @@
         <el-table-column label="同学" min-width="220">
           <template #default="{ row }">
             <div class="cell-main">
-              <span class="avatar">{{ row.avatar || '😀' }}</span>
+              <img v-if="row.avatarUrl" class="avatar-img" :src="row.avatarUrl" alt="" />
+              <span v-else class="avatar">😀</span>
               <div>
                 <div>{{ row.nickname || '未设置昵称' }}</div>
                 <div class="muted">{{ row.openid.slice(-8) }}</div>
