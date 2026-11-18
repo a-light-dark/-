@@ -92,7 +92,8 @@ async function load() {
       ElMessage.error((r && r.msg) || '加载失败')
       return
     }
-    Object.assign(data, r)
+    // adminApi 的 dashboard 返回的是 { ok, data: {...} }，外面再包一层会取不到数字
+    Object.assign(data, r.data || r)
   } catch (err) {
     ElMessage.error('连不上云开发：' + (err.message || err))
   } finally {

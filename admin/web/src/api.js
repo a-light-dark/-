@@ -29,7 +29,9 @@ async function ensureApp() {
   app = cloudbase.init({ env: ENV })
   try {
     const auth = app.auth({ persistence: 'local' })
-    const state = auth.getLoginState ? auth.getLoginState() : null
+    // SDK 2.x 的 getLoginState() 是异步的：不 await 会拿到 Promise，判断永远为假，
+    // 接着又调一次 signInAnonymously 就会卡住（页面一直转圈、"未登录"）
+    const state = auth.getLoginState ? await auth.getLoginState() : null
     if (state && state.uid) {
       authed = true
       return app

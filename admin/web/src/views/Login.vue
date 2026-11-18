@@ -45,7 +45,10 @@ async function onSubmit() {
     const r = await login(form.username.trim(), form.password)
     if (r && r.ok) {
       ElMessage.success('欢迎回来')
-      router.replace('/dashboard')
+      // token 存进 sessionStorage 之后刷新一次：外层布局要重新拉一次"我是谁"，
+      // 否则菜单和页面会停留在登录前的匿名状态（显示未登录、数据空白）
+      await router.replace('/dashboard')
+      location.reload()
     } else {
       ElMessage.error((r && r.msg) || '登录失败')
     }
