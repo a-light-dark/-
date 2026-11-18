@@ -648,20 +648,28 @@ function matchKeyword(post, kw) {
   return content.indexOf(keyword) > -1 || nick.indexOf(keyword) > -1 || tags.indexOf(keyword) > -1
 }
 
-function searchPosts(keyword) {
+// 搜索：走 search 云函数按页取（服务端匹配 + 分页），不再只查最近 100 条
+// 返回 { posts, hasMore, page }，posts 里的图片已换成可直接渲染的临时链接
+function searchPosts(keyword, page) {
   const kw = String(keyword || '').trim()
-  if (!kw) return Promise.resolve([])
+  const pageNo = Math.max(1, Number(page) || 1)
+  if (!kw) return Promise.resolve({ posts: [], hasMore: false, page: 1 })
   return run(function () {
-    return db().collection('posts').orderBy('createdAt', 'desc').limit(100).get().then(function (res) {
-      const list = (res.data || []).map(normalizePost).filter(function (p) {
-        return matchKeyword(p, kw)
+    return wx.cloud.callFunction({ name: 'search', data: { keyword: kw, page: pageNo } }).then(function (res) {
+      const result = (res && res.result) || {}
+      if (result.ok === false) throw new Error(result.msg || '搜索失败')
+      const list = (result.posts || []).map(normalizePost)
+      return resolveImages(list).then(function (ready) {
+        return { posts: ready, hasMore: result.hasMore === true, page: pageNo }
       })
-      return resolveImages(list)
     })
   }, function () {
-    return mock.POSTS.map(normalizeLocalPost).filter(function (p) {
+    const all = mock.POSTS.map(normalizeLocalPost).filter(function (p) {
       return matchKeyword(p, kw)
     })
+    const pageSize = 20
+    const start = (pageNo - 1) * pageSize
+    return { posts: all.slice(start, start + pageSize), hasMore: all.length > start + pageSize, page: pageNo }
   })
 }
 

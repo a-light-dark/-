@@ -13,6 +13,9 @@ Page({
     results: [],
     searched: false,
     loading: false,
+    loadingMore: false,
+    page: 1,
+    hasMore: false,
   },
 
   onLoad() {
@@ -52,16 +55,43 @@ Page({
       wx.showToast({ title: '输入点关键词再搜', icon: 'none' })
       return
     }
-    this.setData({ keyword: kw, loading: true })
+    this.setData({ keyword: kw, loading: true, searched: false, results: [], page: 1, hasMore: false })
     this.saveHistory(kw)
-    api.searchPosts(kw)
-      .then((list) => {
-        this.setData({ results: list, searched: true, loading: false })
+    api.searchPosts(kw, 1)
+      .then((res) => {
+        this.setData({
+          results: res.posts || [],
+          hasMore: res.hasMore === true,
+          page: 1,
+          searched: true,
+          loading: false,
+        })
       })
       .catch((err) => {
         console.error('搜索失败', err)
         this.setData({ searched: true, loading: false })
         wx.showToast({ title: '搜索失败，稍后再试', icon: 'none' })
+      })
+  },
+
+  // 上拉加载下一页（服务端分页，帖子多了也搜得全）
+  onReachBottom() {
+    if (!this.data.searched || this.data.loading || this.data.loadingMore) return
+    if (!this.data.hasMore) return
+    const next = this.data.page + 1
+    this.setData({ loadingMore: true })
+    api.searchPosts(this.data.keyword, next)
+      .then((res) => {
+        this.setData({
+          results: this.data.results.concat(res.posts || []),
+          hasMore: res.hasMore === true,
+          page: next,
+          loadingMore: false,
+        })
+      })
+      .catch(() => {
+        this.setData({ loadingMore: false })
+        wx.showToast({ title: '没加载出来，再上拉一次', icon: 'none' })
       })
   },
 

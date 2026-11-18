@@ -103,5 +103,8 @@
         </view>
       </view>
     </view>
+
+    <view wx:if="{{loadingMore}}" class="empty">加载中…</view>
+    <view wx:if="{{!loading && !loadingMore && results.length > 0 && !hasMore}}" class="empty">没有更多了</view>
   </block>
 </view>

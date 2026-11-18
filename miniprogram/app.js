@@ -24,6 +24,19 @@ App({
     if (this.globalData.cloudReady) {
       require('./utils/api.js').refreshBadge()
     }
+    // 停在前台时每分钟再看一次（1 次 count 读，成本可忽略），小红点不用手动进消息页
+    if (this._badgeTimer) clearInterval(this._badgeTimer)
+    this._badgeTimer = setInterval(() => {
+      if (this.globalData.cloudReady) require('./utils/api.js').refreshBadge()
+    }, 60000)
+  },
+
+  // 切后台就停掉，避免白耗调用次数
+  onHide() {
+    if (this._badgeTimer) {
+      clearInterval(this._badgeTimer)
+      this._badgeTimer = null
+    }
   },
 
   // 所有页面共用：等云开发登录完成（只会真正执行一次，重复调用返回同一个 Promise）

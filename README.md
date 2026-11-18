@@ -88,7 +88,7 @@ campus-forum/
 │       ├── account/         # 注销账号
 │       ├── feedback/        # 建议反馈（提交 + 我的记录）
 │       └── feedback-admin/  # 反馈管理（圈主）
-├── cloudfunctions/          # 云函数（22 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / siteData / viewPost / adminReview / feedback / adminApi / setupCollections）
+├── cloudfunctions/          # 云函数（23 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / siteData / viewPost / adminReview / feedback / adminApi / setupCollections）
 └── tools/check.js           # 自检脚本
 ```
 
@@ -120,7 +120,7 @@ campus-forum/
 
 > `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` / `trash` / `wordfilters` / `backups` 是后加的，不用手动建：调用一次 `setupCollections` 云函数就会建好（在开发者工具里给云函数发个空参数即可，已存在会跳过）。
 
-- 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（22 个都要）
+- 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（23 个都要）
 - 云存储：头像存 `avatars/<openid>/时间戳.png`，帖子图存 `posts/<openid>/时间戳-随机数.png`；云开发控制台 → 存储 里能看到（免费额度够用）
 - ⚠️ **云存储权限必须是「所有用户可读，仅创建者可读写」**（控制台 → 存储 → 权限设置）。如果不是，别人帖子的图片会显示 `STORAGE_EXCEED_AUTHORITY` 加载不出来。列表里的图片客户端会先用 `getTempFileURL` 换成临时 https 链接再显示，真机上更稳
 - 发帖图片：客户端先压到 quality 70 再上传；云函数校验「必须是自己传到 `posts/<openid>/` 下的文件」，并逐张做图片内容检测（同步接口单张上限 750KB）
@@ -329,9 +329,24 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 ## 搜索 & 我的内容
 
 **搜索页**（首页搜索栏 → `pages/search/search`）：
-- 搜帖子内容、昵称、话题——三个字段拼起来做关键词匹配（`api.searchPosts`）
-- 云数据库的正则匹配不了数组元素（`tags`），所以先取最近 100 条帖子再在本地过滤；校园论坛数据量小够用，帖子多了以后建议加关键词字段或搜索服务
+- 搜帖子内容（模糊）和话题标签（精确）——走 `search` 云函数，**服务端分页**，一次 20 条，上拉自动加载下一页（`hasMore` 判断到底）
+- 关键词里的正则特殊字符在服务端转义过，用户乱输 `.` `*` 不会把查询搞崩
+- 之前是「客户端拉最近 100 条再本地过滤」，帖子多了会搜不全，这版已经换掉
 - 热门搜索词写在页面里的 `HOT_WORDS`，搜索历史存在本机 Storage（`searchHistory`，最多 10 条，可一键清空）
+
+**数据库索引（建议手动加，加一次长期有效）**：
+
+云开发控制台 → 数据库 → 选集合 → 「索引管理」→ 新建索引（索引名随意，字段和排序别填错）：
+
+| 集合 | 字段 | 排序 | 用在哪儿 |
+| --- | --- | --- | --- |
+| `posts` | `createdAt` | 降序 | 首页列表、搜索结果排序 |
+| `posts` | `likeCount` | 降序 | 今日热榜 / 本周榜单 |
+| `posts` | `views` | 降序 | 流量看板「浏览最多」 |
+| `notices` | `toOpenid` 升序 + `createdAt` 降序 | 复合索引 | 消息列表（按收件人 + 时间倒序） |
+
+不加也能跑（数据量小），加了列表和消息会明显快一些；控制台给「快速创建索引」链接时直接点也行。
+
 
 **我的内容**（「我的」→ 我的帖子 / 历史评论 → `pages/my-posts/my-posts`）：
 

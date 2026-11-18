@@ -1,0 +1,9 @@
+{
+  "name": "search",
+  "version": "1.0.0",
+  "description": "服务端分页搜索（帖子正文 / 话题标签），替代原来客户端只查最近 100 条",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
