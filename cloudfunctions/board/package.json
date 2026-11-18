@@ -1,0 +1,9 @@
+{
+  "name": "board",
+  "version": "1.0.0",
+  "description": "本周榜单：热帖 Top5 + 活跃同学 Top5（服务端按最近 7 天统计，60 秒缓存）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

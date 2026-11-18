@@ -557,84 +557,71 @@ function fetchHotTopics(limit) {  const n = limit || 6
   })
 }
 
-// 本周热榜 Top N：最近 7 天发的帖子里，按点赞数排。
-// 同样避开 where + orderBy 的复合索引：取最近 100 条在本地筛时间、排序。
-function fetchWeeklyHot(limit) {
-  const n = limit || 5
+// 本周榜单（热帖 Top5 + 活跃同学 Top5）：一次云函数拿全。
+// 以前是客户端拉 100 条帖子 + 200 条评论在本地算（一次进榜 400+ 次文档读、两个请求）；
+// 现在服务端按最近 7 天查（走 createdAt 索引）+ 60 秒缓存，客户端只拿 10 条结果。
+function fetchBoard(hotN, userN) {
+  const hot = hotN || 5
+  const users = userN || 5
+  function normalizeRow(row) {
+    const avatar = row.avatar || '😀'
+    return {
+      id: row.id,
+      content: row.content || '',
+      nickname: row.nickname || '同学',
+      avatar: avatar,
+      avatarIsImage: isImagePath(avatar),
+      likeCount: Number(row.likeCount) || 0,
+      score: Number(row.score) || 0,
+      ts: Number(row.ts) || 0,
+    }
+  }
   return run(function () {
-    const since = Date.now() - 7 * 24 * 3600 * 1000
-    return db().collection('posts').orderBy('createdAt', 'desc').limit(100).get().then(function (res) {
-      const docs = (res.data || []).filter(function (d) {
-        return d.createdAt && new Date(d.createdAt).getTime() >= since
-      })
-      docs.sort(function (a, b) { return (b.likeCount || 0) - (a.likeCount || 0) })
-      const list = docs.slice(0, n).map(normalizePost)
-      return resolveImages(list)
+    return wx.cloud.callFunction({ name: 'board', data: { hot: hot, users: users } }).then(function (res) {
+      const r = res.result || {}
+      if (!r.ok) throw new Error(r.msg || '榜单加载失败')
+      return {
+        hot: (r.hot || []).map(normalizeRow),
+        users: (r.users || []).map(normalizeRow),
+      }
     })
   }, function () {
     const sorted = mock.POSTS.slice().sort(function (a, b) {
       return (b.likeCount || 0) - (a.likeCount || 0)
     })
-    return sorted.slice(0, n).map(normalizeLocalPost)
-  })
-}
-
-// 活跃同学 Top N：最近 7 天，发帖算 2 分、评论算 1 分，按总分排。
-// 云数据库没有聚合查询（client 端），数据量小就拉最近 200 条在本地算。
-function fetchActiveUsers(limit) {
-  const n = limit || 5
-  function tsOf(doc) {
-    return doc.createdAt ? new Date(doc.createdAt).getTime() : 0
-  }
-  return run(function () {
-    const since = Date.now() - 7 * 24 * 3600 * 1000
-    return Promise.all([
-      db().collection('posts').orderBy('createdAt', 'desc').limit(200).get(),
-      db().collection('comments').orderBy('createdAt', 'desc').limit(200).get(),
-    ]).then(function (rs) {
-      const map = {}
-      function add(doc, field, weight) {
-        if (tsOf(doc) < since) return
-        const nick = String(doc.nickname || '').trim()
-        if (!nick || nick === '匿名同学') return
-        if (!map[nick]) {
-          map[nick] = {
-            nickname: nick,
-            avatar: doc.avatar || '😀',
-            avatarIsImage: isImagePath(doc.avatar || ''),
-            postCount: 0,
-            commentCount: 0,
-            score: 0,
-          }
-        }
-        map[nick][field] += 1
-        map[nick].score += weight
-      }
-      ;(rs[0].data || []).forEach(function (d) { add(d, 'postCount', 2) })
-      ;(rs[1].data || []).forEach(function (d) { add(d, 'commentCount', 1) })
-      return Object.keys(map).map(function (k) { return map[k] })
-        .sort(function (a, b) { return b.score - a.score })
-        .slice(0, n)
-    })
-  }, function () {
     const map = {}
-    function add(nick, avatar, field, weight) {
-      const name = String(nick || '').trim()
-      if (!name || name === '匿名同学') return
-      if (!map[name]) {
-        map[name] = { nickname: name, avatar: avatar || '😀', avatarIsImage: isImagePath(avatar || ''), postCount: 0, commentCount: 0, score: 0 }
-      }
-      map[name][field] += 1
-      map[name].score += weight
+    mock.POSTS.forEach(function (p) {
+      const n = String(p.nickname || '').trim()
+      if (!n || n === '匿名同学') return
+      if (!map[n]) map[n] = { nickname: n, avatar: p.avatar || '😀', postCount: 0, commentCount: 0, score: 0 }
+      map[n].postCount += 1
+      map[n].score += 2
+    })
+    ;(mock.COMMENTS || []).forEach(function (c) {
+      const n = String(c.nickname || '').trim()
+      if (!n || n === '匿名同学') return
+      if (!map[n]) map[n] = { nickname: n, avatar: c.avatar || '😀', postCount: 0, commentCount: 0, score: 0 }
+      map[n].commentCount += 1
+      map[n].score += 1
+    })
+    return {
+      hot: sorted.slice(0, hot).map(normalizeLocalPost),
+      users: Object.keys(map).map(function (k) { return map[k] })
+        .sort(function (a, b) { return b.score - a.score })
+        .slice(0, users)
+        .map(function (u) {
+          return {
+            nickname: u.nickname,
+            avatar: u.avatar,
+            avatarIsImage: isImagePath(u.avatar),
+            postCount: u.postCount,
+            commentCount: u.commentCount,
+            score: u.score,
+          }
+        }),
     }
-    ;(mock.POSTS || []).forEach(function (p) { add(p.nickname, p.avatar, 'postCount', 2) })
-    ;(mock.COMMENTS || []).forEach(function (c) { add(c.nickname, c.avatar, 'commentCount', 1) })
-    return Object.keys(map).map(function (k) { return map[k] })
-      .sort(function (a, b) { return b.score - a.score })
-      .slice(0, n)
   })
 }
-
 
 // 搜索：内容 / 话题 / 昵称
 // 云数据库的正则没法直接匹配数组里的元素（tags），校园圈子数据量小，
@@ -1925,12 +1912,11 @@ module.exports = {
   fetchPosts: fetchPosts,
   fetchHotPost: fetchHotPost,
   incView: incView,
-  fetchWeeklyHot: fetchWeeklyHot,
+  fetchBoard: fetchBoard,
   fetchSiteData: fetchSiteData,
   reportAd: reportAd,
   fetchHomeMeta: fetchHomeMeta,
   fetchHotTopics: fetchHotTopics,
-  fetchActiveUsers: fetchActiveUsers,
   TOPIC_LIST: TOPIC_LIST,
   topicMeta: topicMeta,
   searchPosts: searchPosts,

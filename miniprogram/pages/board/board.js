@@ -21,13 +21,10 @@ Page({
 
   load() {
     this.setData({ loading: true })
-    return Promise.all([
-      api.fetchWeeklyHot(5),
-      api.fetchActiveUsers(5),
-    ]).then((res) => {
+    return api.fetchBoard(5, 5).then((res) => {
       this.setData({
-        hot: res[0] || [],
-        users: res[1] || [],
+        hot: res.hot || [],
+        users: res.users || [],
         loading: false,
         offline: !api.isCloudReady(),
       })

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 常驻冒烟测试：不打开微信开发者工具，直接用 tcb CLI 调线上云函数，
- * 把「登录 → 后台接口 → 首页数据 → 搜索 → 详情页」这条主链路跑一遍。
+ * 把「登录 → 后台接口 → 首页数据 → 搜索 → 榜单 → 详情页」这条主链路跑一遍。
  *
  *   node tools/smoke.js            # 全部跑
  *   node tools/smoke.js --env xxx  # 指定环境（默认读 cloudbaserc/全局默认）
@@ -100,6 +100,15 @@ check('搜索（search）', function () {
   const r = invoke('search', { keyword: '日常', page: 1 })
   if (!r.ok) throw new Error(r.msg || '接口返回失败')
   return { detail: '命中 ' + ((r.posts || []).length) + ' 条，hasMore=' + !!r.hasMore }
+})
+
+check('本周榜单（board）', function () {
+  const r = invoke('board', { hot: 5, users: 5 })
+  if (!r.ok) throw new Error(r.msg || '接口返回失败')
+  return {
+    detail: '热帖 ' + ((r.hot || []).length) + ' 条 / 活跃同学 ' + ((r.users || []).length) + ' 位' +
+      (r.cached ? '（缓存）' : ''),
+  }
 })
 
 if (token) {

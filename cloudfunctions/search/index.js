@@ -44,13 +44,23 @@ function toRow(doc) {
 
 // 热搜词：一个词一条文档（_id 就用词本身），搜一次计数 +1
 // 注意：update 一个不存在的文档不会报错（stats.updated = 0），所以必须先 add，撞了再把计数 +1
+// 同一个词 60 秒内只记一次：热搜是趋势，没必要把「连续翻页/反复点」都写进数据库
+const hotCache = new Map()
+const HOT_WINDOW_MS = 60 * 1000
+
 async function bumpHot(keyword) {
+  const key = String(keyword || '').slice(0, 30)
+  if (!key) return
+  const last = hotCache.get(key) || 0
+  if (Date.now() - last < HOT_WINDOW_MS) return
+  hotCache.set(key, Date.now())
+  if (hotCache.size > 500) hotCache.clear()
   const col = db.collection('search_hot')
   try {
-    await col.add({ data: { _id: keyword, keyword: keyword, count: 1, lastAt: Date.now() } })
+    await col.add({ data: { _id: key, keyword: key, count: 1, lastAt: Date.now() } })
   } catch (err) {
     try {
-      await col.doc(keyword).update({ data: { count: _.inc(1), lastAt: Date.now() } })
+      await col.doc(key).update({ data: { count: _.inc(1), lastAt: Date.now() } })
     } catch (e2) {
       console.warn('[search] 记录热搜失败', e2 && e2.errMsg)
     }

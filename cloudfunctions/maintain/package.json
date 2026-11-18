@@ -1,0 +1,9 @@
+{
+  "name": "maintain",
+  "version": "1.0.0",
+  "description": "数据库维护：扫描时间字段类型、把 ISO 字符串时间批量转成 Date（默认 dryRun）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

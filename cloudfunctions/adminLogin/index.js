@@ -11,6 +11,7 @@ const crypto = require('crypto')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const _ = db.command
 const LEGACY_KEY = 'adminPasswordHash'
 const DEFAULT_PASSWORD = 'campus2026' // 第一次登录用这个密码，登录后请在网页里改掉
 const SESSION_TTL = 12 * 3600 * 1000 // 12 小时，并且每次正常操作会滑动续期（见 adminApi）
@@ -247,6 +248,14 @@ exports.main = async (event) => {
       expiresAt: Date.now() + SESSION_TTL,
     },
   })
+
+  // 顺手清掉过期会话：一张表只增不减，久了「在线设备」里全是过期记录。
+  // 失败不影响登录。
+  try {
+    await db.collection('admin_sessions').where({ expiresAt: _.lt(Date.now()) }).remove()
+  } catch (err) {
+    console.warn('清理过期会话失败（不影响登录）', err && err.message)
+  }
 
   return { ok: true, token, username, role: acc.role || 'admin', expiresIn: SESSION_TTL }
 }

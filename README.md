@@ -88,7 +88,7 @@ campus-forum/
 │       ├── account/         # 注销账号
 │       ├── feedback/        # 建议反馈（提交 + 我的记录）
 │       └── feedback-admin/  # 反馈管理（圈主）
-├── cloudfunctions/          # 云函数（23 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / siteData / viewPost / adminReview / feedback / adminApi / setupCollections）
+├── cloudfunctions/          # 云函数（25 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / siteData / viewPost / postDetail / search / board / maintain / adminReview / feedback / adminApi / adminLogin / setupCollections）
 └── tools/check.js           # 自检脚本
 ```
 
@@ -393,6 +393,15 @@ tcb hosting deploy admin/web/dist                          # 部署 PC 后台静
 ```
 
 登录、环境切换、能力边界（NoSQL 文档库仍然只能走控制台或 MCP）和排错都写在 [`docs/cloudbase-cli.md`](docs/cloudbase-cli.md)。
+
+## 数据库与性能
+
+集合清单、索引该建哪些、时间字段为什么必须存 `Date`、查询该守的几条规矩，以及这轮优化前后的实测数字（首页 225→21 次读、榜单 400+→1 次调用等），都写在 [`docs/database.md`](docs/database.md)。
+
+顺手做的两件事：
+
+- `board` 云函数：本周榜单从「客户端拉 100 条帖子 + 200 条评论」改成服务端算完只回 10 条，60 秒缓存。
+- `maintain` 云函数：发现历史数据里 `createdAt` 混进了 ISO 字符串（会让「今天/最近 7 天」的范围查询直接失效），已批量转成 `Date`（46 条文档、0 失败）；以后再遇到用 `tcb fn invoke maintain --params '{"action":"scan"}'` 先抽样。
 
 ## 备份 / 恢复、安全告警、冒烟脚本
 

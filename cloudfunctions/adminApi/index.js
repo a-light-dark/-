@@ -48,6 +48,11 @@ const tokenCache = new Map()
 const SESSION_TTL = 12 * 3600 * 1000
 const SESSION_RENEW_AFTER = 6 * 3600 * 1000
 
+// 工作台数据缓存（30 秒）：一次 dashboard 要算 10 个计数 + join 最近举报，
+// 后台来回切页面时没必要每次都全量算一遍。
+let dashCache = { at: 0, data: null }
+const DASH_CACHE_MS = 30 * 1000
+
 async function resolveToken(token) {
   if (!token) return null
   const key = String(token)
@@ -171,7 +176,13 @@ function esc(s) {
 }
 
 // ============ 工作台 ============
-async function dashboard() {
+async function dashboard(event) {
+  // 工作台一次要算 10 个计数（还要 join 举报对应的帖子）。
+  // 后台经常来回切页面，30 秒内直接复用结果，少打十几次数据库。
+  const force = !!(event && event.force)
+  if (!force && dashCache.data && Date.now() - dashCache.at < DASH_CACHE_MS) {
+    return dashCache.data
+  }
   const [posts, comments, orders, users, reportsCount, feedbackPending, todayPosts, todayComments] = await Promise.all([
     db.collection('posts').count(),
     db.collection('comments').count(),
@@ -215,7 +226,7 @@ async function dashboard() {
     }
   })
 
-  return {
+  const payload = {
     ok: true,
     data: {
       posts: posts.total,
@@ -233,6 +244,8 @@ async function dashboard() {
       }),
     },
   }
+  dashCache = { at: Date.now(), data: payload }
+  return payload
 }
 
 // ============ 帖子管理 ============
