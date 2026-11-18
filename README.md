@@ -107,7 +107,7 @@ campus-forum/
 | `favorites` | 收藏记录（postId，一人一帖一条） | 仅创建者可读写 |
 | `follows` | 关注的话题（tag，一人一话题一条） | 仅创建者可读写 |
 | `reports` | 举报记录（postId/reason，一人一帖一条） | 所有用户不可读写 |
-| `notices` | 消息通知（toOpenid/type/text/postId/read） | 所有用户不可读写 |
+| `notices` | 消息通知（toOpenid/type/text/postId/read） | 自定义规则：只能读 `toOpenid == 自己`，写禁止（实时红点需要） |
 | `feedback` | 建议反馈（content/contact/nickname/avatar/status 待处理·已处理） | 所有用户不可读写 |
 | `reviews` | 订单评价（orderId/fromOpenid/toOpenid/score/text） | 所有用户不可读写 |
 | `announcements` | 公告（title/content/pinned/active，圈主后台发布） | 所有用户不可读写 |
@@ -344,8 +344,11 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 | `posts` | `likeCount` | 降序 | 今日热榜 / 本周榜单 |
 | `posts` | `views` | 降序 | 流量看板「浏览最多」 |
 | `notices` | `toOpenid` 升序 + `createdAt` 降序 | 复合索引 | 消息列表（按收件人 + 时间倒序） |
+| `admin_sessions` | `token` | 升序（唯一） | 后台每个请求校验 token |
+| `admin_accounts` | `username` | 升序（唯一） | 后台登录 |
+| `comments` | `postId` 升序 + `createdAt` 降序 | 复合索引 | 详情页评论、删帖级联 |
 
-不加也能跑（数据量小），加了列表和消息会明显快一些；控制台给「快速创建索引」链接时直接点也行。
+这几条现在都已经建好了（2026-11-18 用 `tcb db nosql execute` 直接下 Mongo `createIndexes`，不用手点控制台）；剩下的 P1/P2 索引见 `docs/database.md`。
 
 
 **我的内容**（「我的」→ 我的帖子 / 历史评论 → `pages/my-posts/my-posts`）：
@@ -412,11 +415,13 @@ tcb hosting deploy admin/web/dist                          # 部署 PC 后台静
 
 ## 实时红点、热搜词、在线设备（P3）
 
-- **实时红点**：`app.js` 里对 `notices` 开了 `watch`，别人给你评论/点赞/抢单时一变更就推送，不需要等轮询；监听失败会自动退回「每分钟查一次」。想让实时生效，需要把 `notices` 的安全规则改成「只能读发给自己的」：
+- **实时红点**：`app.js` 里对 `notices` 开了 `watch`，别人给你评论/点赞/抢单时一变更就推送，不需要等轮询；监听失败会自动退回「每分钟查一次」。它依赖 `notices` 的安全规则是「只能读发给自己的」——**这条规则已经配好了**（2026-11-18 用 `tcb api tcb ModifySafeRule` 写入）：
 
 ```json
 {"read": "doc.toOpenid == auth.openid", "write": false}
 ```
+
+> 副作用（设计如此）：客户端读 `notices` 时必须带 `toOpenid` 条件，否则会被判「无法证明安全」而拒绝。以后自己加查询记得带上。
 
 - **热搜词**：搜索页的「热门搜索」不再是写死的 8 个词，而是 `search_hot` 集合按搜索次数排的真实榜单（每次搜第 1 页 +1），不够 8 个时用默认词补位。
 - **在线设备**：后台「账号管理 → 在线设备」能看到所有未过期的登录会话（账号/身份/登录时间/到期时间），点「强制下线」立刻让那台设备的 token 失效（15 秒内），适合「手机丢了 / 借人登录过」的情况。

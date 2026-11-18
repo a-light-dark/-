@@ -13,7 +13,7 @@
 | `follows` | 关注的话题 | 仅创建者 |
 | `orders` | 互助/跑腿订单 | 只读（抢单、完成走云函数） |
 | `reviews` | 订单互评 | 只读 |
-| `notices` | 消息通知（评论/点赞/抢单/系统） | 不可读写（走 `notices` 云函数） |
+| `notices` | 消息通知（评论/点赞/抢单/系统） | 自定义规则：只读 `toOpenid == 自己`，写禁止 |
 | `reports` / `feedback` | 举报 / 建议反馈 | 不可读写（走云函数） |
 | `announcements` | 公告 | 只读 |
 | `ads` | 广告位（首页 banner / 详情页底部） | 只读 |
@@ -37,16 +37,18 @@
 ### 已有
 
 - `posts`：`createdAt` 降序、`likeCount` 降序、`views` 降序
-- `notices`：`toOpenid` 升序 + `createdAt` 降序（复合）
+- `notices`：`toOpenid` 升序 + `createdAt` 降序（复合，名字 `toOpenid_createdAt`）
+- `admin_sessions`：`token` 升序（唯一，`token_1`）
+- `admin_accounts`：`username` 升序（唯一，`username_1`）
+- `comments`：`postId` 升序 + `createdAt` 降序（`postId_1_createdAt_-1`）
 - 各集合的 `_id` 默认索引
 
-### 建议补（按收益排序，控制台 → 数据库 → 选集合 → 索引管理 → 添加索引）
+> 上面三个 P0 索引是 2026-11-18 用 `tcb db nosql execute` 直接下 Mongo `createIndexes` 建的（见第 6 节命令），不用再手点。
+
+### 还建议补（按收益排序，控制台 → 数据库 → 选集合 → 索引管理 → 添加索引）
 
 | 集合 | 字段 | 为什么 | 优先级 |
 | --- | --- | --- | --- |
-| `admin_sessions` | `token` 升序（唯一） | 后台每个请求都 `where({token})`，没索引就是扫表 | P0 |
-| `admin_accounts` | `username` 升序（唯一） | 登录时按用户名查 | P0 |
-| `comments` | `postId` 升序 + `createdAt` 降序 | 详情页评论、删帖级联 | P0 |
 | `likes` | `postId` 升序 + `_openid` 升序 | 点赞状态、点赞数 | P1 |
 | `favorites` | `_openid` 升序 + `createdAt` 降序 | 我的收藏 | P1 |
 | `posts` | `_openid` 升序 + `createdAt` 降序 | 我的帖子 | P1 |
@@ -98,10 +100,26 @@ tcb fn invoke maintain --params '{"action":"migrate","collections":["posts","com
 | 工作台刷新 | 12 次查询 | 30 秒内复用上一次结果 |
 | 搜索热词写入 | 每搜一次写一次 | 同词 60 秒内只记一次 |
 
-## 6. 已知还没做的
+## 6. 用 CLI 直接改数据库（索引 / 安全规则）
+
+给 `tcb` CLI 传 JSON 时，PowerShell 会把引号吃掉，所以用 node 直接调 CLI 入口最稳（`%TEMP%` 里放过一个 `tcb.cjs` 小工具，项目里也可以用同样的写法）：
+
+```bash
+# 建索引：Mongo 原生命令 createIndexes
+tcb db nosql execute --command '[{"TableName":"comments","CommandType":"COMMAND","Command":"{\"createIndexes\":\"comments\",\"indexes\":[{\"key\":{\"postId\":1,\"createdAt\":-1},\"name\":\"postId_1_createdAt_-1\"}]}"}]'
+
+# 看现有索引：listIndexes
+tcb db nosql execute --command '[{"TableName":"comments","CommandType":"COMMAND","Command":"{\"listIndexes\":\"comments\"}"}]'
+
+# 改集合安全规则（notices 现在就是这条）
+tcb api tcb ModifySafeRule --body '{"EnvId":"cloud1-d6g26wz61eca836b8","CollectionName":"notices","AclTag":"CUSTOM","Rule":"{\"read\":\"doc.toOpenid == auth.openid\",\"write\":false}"}'
+```
+
+注意第二条规则的含义：客户端**只能读到 `toOpenid` 等于自己的消息**。所以客户端查询必须带上 `toOpenid`（`app.js` 的实时红点已经这么写了）；不带这个条件会被云开发判成「无法证明安全」而直接 `DATABASE_PERMISSION_DENIED`——这是设计如此，不是故障。
+
+## 7. 已知还没做的
 
 - **评论只加载前 100 条**：`postDetail` 现在一次给 100 条，超长楼中楼还没有「加载更多」。
 - **搜索是正则全表扫**：`content` 上的模糊匹配用不到索引，数据上万后建议换成「分词 + 关键词字段」或外部搜索。
 - **`audit_logs` / `backups` 没有自动清理**：现在量小，建议以后加「保留最近 N 条」的定时清理。
 - **后台列表的 `count()` 仍每次执行**：帖子/举报/反馈列表都带 `count`，可以后续改成「估算 + 上拉加载」。
-- **缺的索引需要手动建**：云开发没有「用代码建索引」的稳定接口（`tcb` CLI 也不支持 NoSQL 索引），只能按上面的表在控制台点几下。
