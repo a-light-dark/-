@@ -10,7 +10,7 @@ const db = cloud.database()
 
 // 1) 建全部集合（已存在就跳过，可重复调用）：换新环境后跑一次即可
 const COLLECTIONS = [
-  'ads','posts', 'comments', 'orders', 'users', 'likes', 'favorites', 'reports', 'notices', 'feedback', 'follows', 'reviews', 'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters', 'backups', 'admin_sessions', 'admin_accounts', 'approvals', 'meta', 'wordlist']
+  'ads','posts', 'comments', 'orders', 'users', 'likes', 'favorites', 'reports', 'notices', 'feedback', 'follows', 'reviews', 'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters', 'backups', 'admin_sessions', 'admin_accounts', 'approvals', 'meta', 'wordlist', 'login_attempts']
 
 exports.main = async (event) => {
   const result = {}

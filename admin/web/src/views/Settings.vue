@@ -38,7 +38,7 @@
           <el-input v-model="pwd.oldPassword" type="password" show-password autocomplete="off" />
         </el-form-item>
         <el-form-item label="新密码">
-          <el-input v-model="pwd.newPassword" type="password" show-password autocomplete="off" placeholder="至少 6 位" />
+          <el-input v-model="pwd.newPassword" type="password" show-password autocomplete="off" placeholder="至少 8 位，含字母和数字" />
         </el-form-item>
         <el-form-item label="再输一次">
           <el-input v-model="pwd.confirm" type="password" show-password autocomplete="off" />
@@ -176,8 +176,8 @@ async function onChangePassword() {
     ElMessage.warning('先填当前密码')
     return
   }
-  if (!pwd.newPassword || pwd.newPassword.length < 6) {
-    ElMessage.warning('新密码至少 6 位')
+  if (!pwd.newPassword || pwd.newPassword.length < 8 || !/[a-zA-Z]/.test(pwd.newPassword) || !/\d/.test(pwd.newPassword)) {
+    ElMessage.warning('新密码至少 8 位，且要有字母和数字')
     return
   }
   if (pwd.newPassword !== pwd.confirm) {

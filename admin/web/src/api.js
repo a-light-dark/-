@@ -26,17 +26,23 @@ export function setToken(t) {
 async function ensureApp() {
   if (app) return app
   app = cloudbase.init({ env: ENV })
-  if (!authed) {
-    authed = true
-    try {
-      const auth = app.auth({ persistence: 'local' })
-      if (auth.anonymousAuthProvider) {
-        await auth.anonymousAuthProvider().signIn()
-      }
-    } catch (err) {
-      // 没开匿名登录也能继续：部分环境允许免登录调用云函数
-      console.warn('[admin] 匿名登录失败，继续尝试直接调用：', err && err.message)
+  try {
+    const auth = app.auth({ persistence: 'local' })
+    const state = auth.getLoginState ? auth.getLoginState() : null
+    if (state && state.uid) {
+      authed = true
+      return app
     }
+    // SDK 2.x 用 signInAnonymously；1.x 才有 anonymousAuthProvider
+    if (typeof auth.signInAnonymously === 'function') {
+      await auth.signInAnonymously()
+    } else if (auth.anonymousAuthProvider) {
+      await auth.anonymousAuthProvider().signIn()
+    }
+    authed = true
+  } catch (err) {
+    authed = false
+    console.warn('[admin] 匿名登录失败：', (err && (err.message || err.code)) || err)
   }
   return app
 }

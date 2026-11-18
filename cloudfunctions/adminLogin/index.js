@@ -68,6 +68,62 @@ async function findSession(token) {
   return s
 }
 
+// ===== 登录限流（防爆破）=====
+// 同一账号 10 分钟内错 5 次 → 锁 10 分钟。记录在 login_attempts：{ key, count, firstAt, lastAt, lockedUntil }
+const LOCK_LIMIT = 5
+const LOCK_MS = 10 * 60 * 1000
+const WINDOW_MS = 10 * 60 * 1000
+
+function attemptKey(username) {
+  return 'u:' + String(username || '').toLowerCase()
+}
+
+async function readAttempt(key) {
+  try {
+    const res = await db.collection('login_attempts').where({ key }).limit(1).get()
+    return (res.data || [])[0] || null
+  } catch (err) {
+    return null
+  }
+}
+
+async function recordFail(key) {
+  const now = Date.now()
+  const doc = await readAttempt(key)
+  if (!doc) {
+    try {
+      await db.collection('login_attempts').add({ data: { key, count: 1, firstAt: now, lastAt: now, lockedUntil: 0 } })
+    } catch (err) {
+      console.warn('记录登录失败失败', err && err.message)
+    }
+    return 1
+  }
+  const inWindow = now - Number(doc.firstAt || 0) < WINDOW_MS
+  const count = (inWindow ? Number(doc.count || 0) : 0) + 1
+  const lockedUntil = count >= LOCK_LIMIT ? now + LOCK_MS : Number(doc.lockedUntil || 0)
+  try {
+    await db.collection('login_attempts').doc(doc._id).update({
+      data: { count, firstAt: inWindow ? doc.firstAt : now, lastAt: now, lockedUntil },
+    })
+  } catch (err) {
+    console.warn('更新登录失败次数失败', err && err.message)
+  }
+  return count
+}
+
+async function clearFail(key) {
+  try {
+    await db.collection('login_attempts').where({ key }).remove()
+  } catch (err) {
+    console.warn('清空登录失败次数失败', err && err.message)
+  }
+}
+
+function lockMessage(lockedUntil) {
+  const mins = Math.max(1, Math.ceil((Number(lockedUntil) - Date.now()) / 60000))
+  return '密码错太多次了，' + mins + ' 分钟后再试（或者让圈主在后台重置密码）'
+}
+
 exports.main = async (event) => {
   const action = String(event.action || 'login')
 
@@ -96,7 +152,9 @@ exports.main = async (event) => {
     if (!acc) return { ok: false, msg: '账号不存在' }
     const oldPwd = String(event.oldPassword || '')
     const newPwd = String(event.newPassword || '')
-    if (newPwd.length < 6) return { ok: false, msg: '新密码至少 6 位' }
+    if (newPwd.length < 8) return { ok: false, msg: '新密码至少 8 位' }
+    if (!/[a-zA-Z]/.test(newPwd) || !/\d/.test(newPwd)) return { ok: false, msg: '新密码要同时有字母和数字' }
+    if (newPwd === oldPwd) return { ok: false, msg: '新密码不能和旧密码一样' }
     if (sha256(oldPwd) !== acc.passwordHash) return { ok: false, msg: '旧密码不对' }
     await db.collection('admin_accounts').where({ username: s.username }).update({
       data: { passwordHash: sha256(newPwd), updatedAt: db.serverDate() },
@@ -112,6 +170,7 @@ exports.main = async (event) => {
         console.warn('同步旧密码哈希失败', err && err.message)
       }
     }
+    await clearFail(attemptKey(s.username))
     return { ok: true }
   }
 
@@ -123,10 +182,26 @@ exports.main = async (event) => {
   const password = String(event.password || '')
   if (!username || !password) return { ok: false, msg: '请输入账号和密码' }
 
+  const key = attemptKey(username)
+  const attempt = await readAttempt(key)
+  if (attempt && Number(attempt.lockedUntil || 0) > Date.now()) {
+    return { ok: false, msg: lockMessage(attempt.lockedUntil), locked: true }
+  }
+
   const acc = await findAccount(username)
-  if (!acc) return { ok: false, msg: '账号或密码不对' }
+  if (!acc) {
+    const n = await recordFail(key)
+    if (n >= LOCK_LIMIT) return { ok: false, msg: lockMessage(Date.now() + LOCK_MS), locked: true }
+    return { ok: false, msg: '账号或密码不对，还能试 ' + (LOCK_LIMIT - n) + ' 次' }
+  }
   if (acc.active === false) return { ok: false, msg: '这个账号已被停用，找圈主开一下' }
-  if (sha256(password) !== acc.passwordHash) return { ok: false, msg: '账号或密码不对' }
+  if (sha256(password) !== acc.passwordHash) {
+    const n = await recordFail(key)
+    if (n >= LOCK_LIMIT) return { ok: false, msg: lockMessage(Date.now() + LOCK_MS), locked: true }
+    return { ok: false, msg: '账号或密码不对，还能试 ' + (LOCK_LIMIT - n) + ' 次' }
+  }
+
+  await clearFail(key)
 
   const token = crypto.randomBytes(24).toString('hex')
   await db.collection('admin_sessions').add({

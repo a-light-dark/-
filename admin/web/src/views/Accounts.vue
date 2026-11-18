@@ -48,7 +48,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="初始密码">
-          <el-input v-model="form.password" type="password" show-password maxlength="30" placeholder="至少 6 位" />
+          <el-input v-model="form.password" type="password" show-password maxlength="30" placeholder="至少 8 位，含字母和数字" />
         </el-form-item>
       </el-form>
       <div class="tip">开发者：能看所有数据，但「修改」会先进入审核，由管理员点通过后才生效。</div>
@@ -117,8 +117,8 @@ function openCreate() {
 }
 
 async function onCreate() {
-  if (!form.username || form.password.length < 6) {
-    ElMessage.warning('账号要有，密码至少 6 位')
+  if (!form.username || form.password.length < 8) {
+    ElMessage.warning('账号要 3-20 位，密码至少 8 位且含字母和数字')
     return
   }
   saving.value = true
@@ -159,10 +159,10 @@ async function onActiveChange(row, active) {
 async function onResetPassword(row) {
   let pwd = ''
   try {
-    const r = await ElMessageBox.prompt(`给「${row.username}」设置新密码（至少 6 位）`, '重置密码', {
+    const r = await ElMessageBox.prompt(`给「${row.username}」设置新密码（至少 8 位，含字母和数字）`, '重置密码', {
       inputType: 'password',
-      inputPattern: /^.{6,30}$/,
-      inputErrorMessage: '密码要 6-30 位',
+      inputPattern: /^(?=.*[a-zA-Z])(?=.*\d).{8,30}$/,
+      inputErrorMessage: '密码要 8-30 位，且同时有字母和数字',
     })
     pwd = r.value
   } catch (err) {

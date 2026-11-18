@@ -927,6 +927,12 @@ async function accountsList() {
   }
 }
 
+function weakPassword(p) {
+  if (String(p).length < 8) return '密码至少 8 位'
+  if (!/[a-zA-Z]/.test(p) || !/\d/.test(p)) return '密码要同时有字母和数字'
+  return ''
+}
+
 async function accountCreate(event) {
   const username = String(event.username || '').trim()
   const role = String(event.role || 'operator')
@@ -934,7 +940,10 @@ async function accountCreate(event) {
   const nickname = String(event.nickname || '').trim()
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return { ok: false, msg: '账号要 3-20 位字母/数字/下划线' }
   if (!ROLE_LABEL[role]) return { ok: false, msg: '角色不对' }
-  if (password.length < 6) return { ok: false, msg: '初始密码至少 6 位' }
+  const weak = weakPassword(password)
+  if (weak) return { ok: false, msg: '初始' + weak }
+  const total = await db.collection('admin_accounts').count()
+  if ((total.total || 0) >= 20) return { ok: false, msg: '后台账号最多 20 个，先删掉不用的' }
   const dup = await db.collection('admin_accounts').where({ username: username }).limit(1).get()
   if ((dup.data || []).length) return { ok: false, msg: '这个账号已经有了' }
   await db.collection('admin_accounts').add({
@@ -972,7 +981,8 @@ async function accountSetRole(username, role) {
 async function accountSetPassword(username, password) {
   const u = String(username || '')
   const p = String(password || '')
-  if (p.length < 6) return { ok: false, msg: '新密码至少 6 位' }
+  const weak = weakPassword(p)
+  if (weak) return { ok: false, msg: '新' + weak }
   const res = await db.collection('admin_accounts').where({ username: u }).update({ data: { passwordHash: sha256(p), updatedAt: db.serverDate() } })
   if (!res.stats.updated) return { ok: false, msg: '账号不存在' }
   return { ok: true }
