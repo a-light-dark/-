@@ -67,6 +67,15 @@ npm run build          # 产物在 dist/
 
 部署完会给你一个 `xxx.tcloudbaseapp.com` 的地址，用电脑浏览器打开就是后台。
 
+### 已经部署的地址
+
+https://cloud1-d6g26wz61eca836b8-1532263586.tcloudbaseapp.com/
+
+两个会拦人的地方（都不是后台的 bug）：
+
+1. 打开先弹出腾讯云开发的「页面访问提示」——默认测试域名的限制，点「确定访问」才进。要让别人也能用、并去掉这个提示，需要绑定自定义域名（要备案）。
+2. 如果登录报 `连不上云开发：... unauthenticated ... credentials not found`，就是上面那个 **匿名登录** 开关还没打开。
+
 ## 目录
 
 ```

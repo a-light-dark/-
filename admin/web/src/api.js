@@ -41,14 +41,38 @@ async function ensureApp() {
   return app
 }
 
+function toError(err) {
+  // @cloudbase/js-sdk 抛的经常是对象，直接 String(err) 只会得到 [object Object]
+  if (err instanceof Error) return err
+  const parts = []
+  if (err && err.code) parts.push(String(err.code))
+  if (err && err.message) parts.push(String(err.message))
+  if (err && err.errMsg) parts.push(String(err.errMsg))
+  if (err && err.error && (err.error.message || err.error.code)) parts.push(String(err.error.message || err.error.code))
+  if (!parts.length) {
+    try {
+      parts.push(typeof err === 'string' ? err : JSON.stringify(err))
+    } catch (e) {
+      parts.push(String(err))
+    }
+  }
+  return new Error(parts.join('：'))
+}
+
 async function invoke(name, data) {
   if (MOCK) {
     const mod = await import('./mock.js')
     return mod.mockCall(name, data)
   }
-  const ins = await ensureApp()
-  const res = await ins.callFunction({ name, data })
-  return res.result
+  try {
+    const ins = await ensureApp()
+    const res = await ins.callFunction({ name, data })
+    return res.result
+  } catch (err) {
+    const e = toError(err)
+    console.warn('[admin] 云开发调用失败：', name, e.message)
+    throw e
+  }
 }
 
 export async function login(username, password) {
