@@ -673,6 +673,27 @@ function searchPosts(keyword, page) {
   })
 }
 
+// 热搜词：search 云函数统计的真实搜索次数榜（没网/没表时返回默认词）
+const DEFAULT_HOT_WORDS = ['图书馆', '食堂', '考试周', '社团', '失物招领', '二手', '跑腿', '脱单']
+
+function searchHotWords() {
+  return wx.cloud.callFunction({ name: 'search', data: { action: 'hot' } })
+    .then(function (res) {
+      const result = (res && res.result) || {}
+      const words = (result.words || []).map(function (w) { return w.word }).filter(Boolean)
+      // 真实热词不够 6 个时用默认词补位，页面不至于空荡荡
+      const merged = words.slice()
+      DEFAULT_HOT_WORDS.forEach(function (w) {
+        if (merged.length < 8 && merged.indexOf(w) < 0) merged.push(w)
+      })
+      return merged
+    })
+    .catch(function (err) {
+      console.warn('[api] 热搜词取不到，用默认词', err && (err.errMsg || err.message))
+      return DEFAULT_HOT_WORDS
+    })
+}
+
 function fetchPost(id) {
   const postId = String(id || '')
   return run(function () {
@@ -1913,6 +1934,7 @@ module.exports = {
   TOPIC_LIST: TOPIC_LIST,
   topicMeta: topicMeta,
   searchPosts: searchPosts,
+  searchHotWords: searchHotWords,
   fetchPost: fetchPost,
   fetchPostBundle: fetchPostBundle,
   createPost: createPost,

@@ -19,23 +19,68 @@ App({
     this.ready()
   },
 
-  // 每次回到前台都刷新一下未读红点（别人可能刚给你点了赞/评论）
+  // 每次回到前台先刷一次红点（兜底），同时在后台开一个实时监听：
+  // 有人给你评论/点赞/抢单时，数据库一变更就推送过来，不用等轮询
   onShow() {
     if (this.globalData.cloudReady) {
       require('./utils/api.js').refreshBadge()
+      this.startBadgeWatch()
     }
-    // 停在前台时每分钟再看一次（1 次 count 读，成本可忽略），小红点不用手动进消息页
+    // 实时监听不可用（权限没放开 / 环境不支持）时才退回每分钟轮询
     if (this._badgeTimer) clearInterval(this._badgeTimer)
     this._badgeTimer = setInterval(() => {
-      if (this.globalData.cloudReady) require('./utils/api.js').refreshBadge()
+      if (this.globalData.cloudReady && !this._badgeWatcher) require('./utils/api.js').refreshBadge()
     }, 60000)
   },
 
-  // 切后台就停掉，避免白耗调用次数
+  // 切后台就断开监听、停掉轮询，避免白耗连接和调用次数
   onHide() {
+    this.stopBadgeWatch()
     if (this._badgeTimer) {
       clearInterval(this._badgeTimer)
       this._badgeTimer = null
+    }
+  },
+
+  // 实时红点：监听 notices 里「发给我的、还没读的」记录
+  startBadgeWatch() {
+    if (this._badgeWatcher || !this.globalData.openid) return
+    try {
+      const db = wx.cloud.database()
+      this._badgeWatcher = db.collection('notices')
+        .where({ toOpenid: this.globalData.openid, read: false })
+        .watch({
+          onChange: (snapshot) => {
+            const count = (snapshot.docs || []).length
+            this.applyBadge(count)
+          },
+          onError: (err) => {
+            console.warn('[app] 实时红点不可用，退回轮询', err && (err.errMsg || err.message))
+            this._badgeRealtime = false
+            this._badgeWatcher = null
+          },
+        })
+      this._badgeRealtime = true
+    } catch (err) {
+      console.warn('[app] 实时红点启动失败，退回轮询', err)
+      this._badgeRealtime = false
+      this._badgeWatcher = null
+    }
+  },
+
+  stopBadgeWatch() {
+    if (!this._badgeWatcher) return
+    try { this._badgeWatcher.close() } catch (e) {}
+    this._badgeWatcher = null
+  },
+
+  // 把未读数同步到 tabBar 小红点（<0 表示先不变）
+  applyBadge(count) {
+    const n = Number(count) || 0
+    if (n > 0) {
+      wx.setTabBarBadge({ index: 3, text: n > 99 ? '99+' : String(n), fail: () => {} })
+    } else {
+      wx.removeTabBarBadge({ index: 3, fail: () => {} })
     }
   },
 
@@ -71,8 +116,9 @@ App({
           avatar: '😀',
         }
         this._failedAt = 0
-        // 登录成功后刷新「消息」tab 的未读红点（失败不影响页面）
+        // 登录成功后刷新「消息」tab 的未读红点，并开实时监听（失败不影响页面）
         require('./utils/api.js').refreshBadge()
+        this.startBadgeWatch()
         return true
       })
       .catch((err) => {

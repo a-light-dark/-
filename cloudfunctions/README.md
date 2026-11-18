@@ -17,10 +17,12 @@
 | `deleteComment/` | 删自己的评论（顶层评论连同它的回复一起删，并回补 `posts.commentCount`） | 客户端只读评论；而且删完要改「别人的帖子」上的评论数，只能服务端做 |
 | `viewPost/` | 浏览量 +1（进详情页时调用） | 客户端改不了别人帖子的 `views`；服务端用 `_.inc(1)` 原子加，避免并发丢更新 |
 | `postDetail/` | 详情页一次拿全：正文 + 是否点赞/收藏 + 第一页评论 + 详情页广告 | 把原来 3 次云函数调用合并成 1 次（省调用费、打开更快） |
+| `search/`（`action:'hot'`） | 热搜词榜：返回搜索次数前 10；每次真实搜索第 1 页会把词计数 +1（`search_hot` 集合，`_id` 就是词本身） | 搜一次写一次太贵，只记第一页；表没建时返回空数组，前端用默认词兜底 |
 | `search/` | 服务端分页搜索（正文模糊 + 话题精确），一次返回 20 条 + `hasMore` | 之前客户端只拉最近 100 条本地过滤，帖子多了搜不全 |
 | `deleteAccount/` | 注销账号：删自己的资料与全部内容 | 要跨集合批量删数据、改别人的帖子计数；有未完成订单时先拦下 |
 | `reportPost/` | 举报帖子（写 `reports` 集合） | 举报记录不能由客户端直接写；理由白名单 + 防重复举报 |
 | `notices/` | 消息通知：列表 / 未读数 / 单条已读 / 一键已读（类型 comment/like/order/**system**，system 是圈主处理举报/反馈后的结果通知） | 通知文档的 `_openid` 是发送者，收件人读不到，只能按 `toOpenid` 由服务端查 |
+| `adminApi/` 的 `accounts.sessions` / `accounts.revoke` | 在线设备：列出未过期的后台登录会话（账号/身份/登录时间/到期时间），`revoke` 按会话 id 强制下线（删 `admin_sessions`，对方 token 最多 15 秒后失效） | 只有圈主能看/能踢；token 缓存 15 秒是「踢了能立刻生效」的关键 |
 | `adminApi/` 的 `backup.restore` | 从云存储的备份 JSON 恢复：`{id, dryRun, from, limit, concurrency}`，每批 ≤200 条（默认 50、并发 10），返回 `{done, written, next, progress, collections}` | 云函数单次只跑 3 秒，一次写几百条会超时，所以必须在网页端循环分批调用 |
 | `siteData/` | 公开数据网关：代读「公告」「首页 banner 文案」「广告位」，并接收广告曝光/点击上报（`{action:'adReport', id, type:'view|click'}`） | 公告/配置/广告集合对用户不可读写；广告下发按 enabled + 投放时间窗 + weight 过滤，曝光点击用 `_.inc(1)` 原子累加 |
 | `adminReview/` | 举报处理：是否管理员 / 举报列表 / 删帖 / 忽略举报（管理员 openid 白名单） | 要删别人的帖子，客户端没权限；白名单放服务端，客户端改不了 |

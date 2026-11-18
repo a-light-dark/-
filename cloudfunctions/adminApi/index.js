@@ -71,7 +71,8 @@ async function resolveToken(token) {
         until = exp
       }
     }
-    tokenCache.set(key, { username: actor.username, role: actor.role, until: Math.min(until, Date.now() + 60000) })
+    // 缓存只留 15 秒：省掉大部分重复读，同时「强制下线」能在 15 秒内生效
+    tokenCache.set(key, { username: actor.username, role: actor.role, until: Math.min(until, Date.now() + 15000) })
     return actor
   } catch (err) {
     return null
@@ -1202,6 +1203,52 @@ async function accountSetActive(username, active, actorName) {
   return { ok: true }
 }
 
+// ============ 在线设备（后台登录会话） ============
+async function sessionsList() {
+  const now = Date.now()
+  let res
+  try {
+    res = await db.collection('admin_sessions')
+      .where({ expiresAt: _.gt(now) })
+      .orderBy('createdAt', 'desc')
+      .limit(20)
+      .get()
+  } catch (err) {
+    console.warn('读会话失败', err && err.message)
+    return { ok: true, list: [] }
+  }
+  return {
+    ok: true,
+    list: (res.data || []).map(function (s) {
+      return {
+        id: s._id,
+        username: s.username || '',
+        role: s.role || '',
+        createdAt: s.createdAt && s.createdAt.$date ? s.createdAt.$date : (Number(s.createdAt) || 0),
+        expiresAt: Number(s.expiresAt) || 0,
+      }
+    }),
+  }
+}
+
+// 强制下线：删掉那条 session，对方下一次请求就会被拒（前端 token 失效后跳登录页）
+async function sessionRevoke(id, actor) {
+  const sid = String(id || '')
+  if (!sid) return { ok: false, msg: '缺少会话 id' }
+  let doc
+  try {
+    doc = await db.collection('admin_sessions').doc(sid).get()
+  } catch (err) {
+    return { ok: false, msg: '这条会话已经失效了' }
+  }
+  const s = doc.data || {}
+  // 管理员只能踢开发者/运营/分析员，圈主的会话只有圈主能踢
+  if (s.role === 'owner' && actor.role !== 'owner') return { ok: false, msg: '只有圈主能踢掉圈主的会话' }
+  await db.collection('admin_sessions').doc(sid).remove()
+  tokenCache.delete(s.token)
+  return { ok: true, username: s.username || '' }
+}
+
 async function accountRemove(username) {
   const u = String(username || '')
   if (u === ACTOR.name) return { ok: false, msg: '不能删自己' }
@@ -1769,6 +1816,13 @@ exports.main = async (event) => {
       case 'accounts.remove':
         res = await accountRemove(event.username)
         if (res.ok) await audit('accounts.remove', 'account', event.username, '')
+        break
+      case 'accounts.sessions':
+        res = await sessionsList()
+        break
+      case 'accounts.revoke':
+        res = await sessionRevoke(event.id, actor)
+        if (res.ok) await audit('accounts.revoke', 'session', res.username || event.id, '')
         break
       case 'approvals.list':
         res = await approvalsList(event, actor)

@@ -42,7 +42,41 @@ function toRow(doc) {
   }
 }
 
+// 热搜词：一个词一条文档（_id 就用词本身），搜一次计数 +1
+// 注意：update 一个不存在的文档不会报错（stats.updated = 0），所以必须先 add，撞了再把计数 +1
+async function bumpHot(keyword) {
+  const col = db.collection('search_hot')
+  try {
+    await col.add({ data: { _id: keyword, keyword: keyword, count: 1, lastAt: Date.now() } })
+  } catch (err) {
+    try {
+      await col.doc(keyword).update({ data: { count: _.inc(1), lastAt: Date.now() } })
+    } catch (e2) {
+      console.warn('[search] 记录热搜失败', e2 && e2.errMsg)
+    }
+  }
+}
+
+// 热词榜：按搜索次数取前 10（表还没建时返回空数组，页面用默认词兜底）
+async function hotWords() {
+  try {
+    const res = await db.collection('search_hot').orderBy('count', 'desc').limit(10).get()
+    return (res.data || []).map(function (d) {
+      return { word: d.keyword || d._id, count: d.count || 0 }
+    })
+  } catch (err) {
+    console.warn('[search] 热搜表还没建（跑一次 setupCollections 就行）', err && err.errMsg)
+    return []
+  }
+}
+
 exports.main = async (event) => {
+  // 只取热搜榜，不搜内容
+  if (event.action === 'hot') {
+    const words = await hotWords()
+    return { ok: true, words: words }
+  }
+
   const keyword = String(event.keyword || '').trim().slice(0, 30)
   if (!keyword) return { ok: true, posts: [], hasMore: false, page: 1, pageSize: PAGE, keyword: '' }
 
@@ -68,6 +102,8 @@ exports.main = async (event) => {
 
     const rows = res.data || []
     const hasMore = rows.length > pageSize
+    // 只记第一页，避免上拉加载把同一个词刷很多次
+    if (page === 1) await bumpHot(keyword)
     return {
       ok: true,
       keyword: keyword,

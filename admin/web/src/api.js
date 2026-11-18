@@ -176,6 +176,8 @@ export const setAccountRole = (username, role) => callAdmin('accounts.setRole', 
 export const setAccountPassword = (username, password) => callAdmin('accounts.setPassword', { username, password })
 export const setAccountActive = (username, active) => callAdmin('accounts.setActive', { username, active })
 export const removeAccount = (username) => callAdmin('accounts.remove', { username })
+export const fetchSessions = () => callAdmin('accounts.sessions')
+export const revokeSession = (id) => callAdmin('accounts.revoke', { id })
 
 export const fetchApprovals = (page = 1, pageSize = 20, status = '') => callAdmin('approvals.list', { page, pageSize, status })
 export const approveApproval = (id) => callAdmin('approvals.approve', { id })

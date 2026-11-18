@@ -291,6 +291,17 @@ export function mockCall(name, data) {
     if (i > -1) ACCOUNTS.splice(i, 1)
     return { ok: true }
   }
+  if (action === 'accounts.sessions') {
+    const now = Date.now()
+    return {
+      ok: true,
+      list: [
+        { id: 's1', username: 'admin', role: 'owner', createdAt: now - 40 * 60 * 1000, expiresAt: now + 8 * 3600 * 1000 },
+        { id: 's2', username: 'ops01', role: 'operator', createdAt: now - 3 * 3600 * 1000, expiresAt: now + 5 * 3600 * 1000 },
+      ],
+    }
+  }
+  if (action === 'accounts.revoke') return { ok: true, username: 'ops01' }
 
   if (action === 'approvals.list') {
     const status = String(d.status || '').trim()

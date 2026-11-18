@@ -20,6 +20,10 @@ Page({
 
   onLoad() {
     this.setData({ history: wx.getStorageSync(HISTORY_KEY) || [] })
+    // 热搜词用真实搜索统计（服务端前 10），取不到就保留上面的默认词
+    api.searchHotWords().then((words) => {
+      if (words && words.length) this.setData({ hotWords: words })
+    }).catch(() => {})
   },
 
   onInput(e) {

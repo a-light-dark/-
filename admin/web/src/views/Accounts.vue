@@ -34,6 +34,31 @@
       </el-table>
     </el-card>
 
+    <el-card shadow="never" style="margin-top: 16px">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px">
+        <div style="font-weight: 600">在线设备（{{ sessions.length }}）</div>
+        <el-button size="small" :loading="sessionsLoading" @click="loadSessions">刷新</el-button>
+      </div>
+      <div class="tip" style="margin-bottom: 10px">一个账号可以在多台设备登录；发现陌生的，点「强制下线」立刻踢掉，对方 token 失效。</div>
+      <el-table :data="sessions" v-loading="sessionsLoading" size="small" empty-text="现在没有在线设备">
+        <el-table-column prop="username" label="账号" width="140" />
+        <el-table-column label="身份" width="120">
+          <template #default="{ row }">{{ roleLabel(row.role) }}</template>
+        </el-table-column>
+        <el-table-column label="登录时间" width="170">
+          <template #default="{ row }">{{ fmt(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="到期时间" width="170">
+          <template #default="{ row }">{{ fmt(row.expiresAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作">
+          <template #default="{ row }">
+            <el-button size="small" text type="danger" @click="onRevoke(row)">强制下线</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
     <el-dialog v-model="dialog" title="新建后台账号" width="420px">
       <el-form label-width="88px">
         <el-form-item label="账号">
@@ -63,7 +88,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { createAccount, fetchAccounts, fetchMe, removeAccount, setAccountActive, setAccountPassword, setAccountRole } from '../api.js'
+import { createAccount, fetchAccounts, fetchMe, fetchSessions, removeAccount, revokeSession, setAccountActive, setAccountPassword, setAccountRole } from '../api.js'
 
 const ROLES = [
   { value: 'owner', label: '圈主' },
@@ -75,6 +100,8 @@ const ROLES = [
 
 const list = ref([])
 const loading = ref(false)
+const sessions = ref([])
+const sessionsLoading = ref(false)
 const dialog = ref(false)
 const saving = ref(false)
 const me = reactive({ username: '' })
@@ -103,9 +130,37 @@ async function loadMe() {
   if (res && res.ok) me.username = res.username || ''
 }
 
+const roleLabel = (role) => (ROLES.find((r) => r.value === role) || {}).label || role || '-'
+
+async function loadSessions() {
+  sessionsLoading.value = true
+  try {
+    const res = await fetchSessions()
+    if (res.ok) sessions.value = res.list || []
+    else ElMessage.error(res.msg || '加载在线设备失败')
+  } finally {
+    sessionsLoading.value = false
+  }
+}
+
+async function onRevoke(row) {
+  try {
+    await ElMessageBox.confirm(`强制让「${row.username}」的这台设备下线？对方下次操作会被要求重新登录。`, '强制下线', { type: 'warning' })
+  } catch (err) {
+    return
+  }
+  const res = await revokeSession(row.id)
+  if (!res.ok) ElMessage.error(res.msg || '操作失败')
+  else {
+    ElMessage.success('已下线')
+    await loadSessions()
+  }
+}
+
 onMounted(async () => {
   await loadMe()
   await load()
+  await loadSessions()
 })
 
 function openCreate() {
