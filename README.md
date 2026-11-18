@@ -375,10 +375,24 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 
 - **流量看板**（Web 后台 / 小程序管理台同数据）：近 7/14/30 天新增帖子、评论、同学柱状图；帖子总数 / 浏览总量 / 点赞 / 互助单 / 活跃同学（7 天内发过帖或评论）；浏览最多、点赞最多 Top5；话题分布。数据来自 `adminApi` 的 `analytics.overview`（扫最近 1000 条聚合，不额外花钱）。
 - **真实 UV/PV 不在云开发里**：微信小程序后台 → 统计 → 访问分析，才有启动次数、访问人数、留存；本页是「内容与互动流量」。
-- **广告位**：集合 `ads`（24 个集合之一），字段 `title/image/position/linkType/linkValue/weight/enabled/startAt/endAt/views/clicks`。位置 `home_banner`（首页 banner，已接入小程序首页）和 `detail_bottom`（详情页底部，接口已留、前端未放）。管理台「广告管理」负责增删改、开关、看曝光/点击/点击率。
+- **广告位**：集合 `ads`（24 个集合之一），字段 `title/image/position/linkType/linkValue/weight/enabled/startAt/endAt/views/clicks`。位置 `home_banner`（首页 banner，已接入小程序首页）和 `detail_bottom`（详情页底部，已接入帖子详情页，0.6.18）。管理台「广告管理」负责增删改、开关、看曝光/点击/点击率。
 - **广告下发接口**：`siteData`（公开云函数）返回 `ads` 数组，只给 `enabled=true` 且在投放时间窗内、按 `weight` 倒序；小程序端 `api.fetchSiteData()` 拿到的 `ads` 已把云存储 fileID 换成临时 https 链接。
 - **曝光/点击上报**：`siteData` 的 `adReport` 动作（`{action:'adReport', id, type:'view|click'}`），小程序端 `api.reportAd(id, type)` 封装；首页加载时曝光一次、点广告时点击一次。
 - **屏蔽词命中**：`wordfilters` 每个词多了 `hits`/`lastHitAt`；`createPost`/`addComment`/`createOrder` 命中时自动 `inc(1)`。Web 敏感词库支持「批量导入（一行一个/逗号分隔，单次 ≤100）」「复制全部」「按命中次数排序」，能直接看出哪类内容最常被拦。
+
+## 命令行管云开发（tcb CLI）
+
+已经接好 CloudBase 官方命令行（`@cloudbase/cli` 3.9.3），**不开微信开发者工具也能部署云函数、直接调接口、看日志**：
+
+```
+tcb fn deploy search --dir cloudfunctions/search --force   # 部署一个函数
+tcb fn list                                                # 看所有函数状态
+tcb fn invoke search --params '{"keyword":"日常","page":1}'  # 云端直接调
+tcb logs search --query 'function_name:"search"'           # 看日志
+tcb hosting deploy admin/web/dist                          # 部署 PC 后台静态页
+```
+
+登录、环境切换、能力边界（NoSQL 文档库仍然只能走控制台或 MCP）和排错都写在 [`docs/cloudbase-cli.md`](docs/cloudbase-cli.md)。
 
 ## 怎么在微信开发者工具里打开
 
