@@ -13,18 +13,13 @@ Page({
     replyNick: '',    // 正在回复谁（展示用）
     inputFocus: false,
     replyPlaceholder: '说点什么…',
+    detailAd: null,   // 详情页底部广告位
   },
 
   onLoad(options) {
     this.postId = String(options.id || '')
     this._loaded = true
     this.loadAll()
-    // 浏览量 +1（5 分钟内重复进同一条不重复算）
-    api.incView(this.postId).then((views) => {
-      if (views && this.data.post) {
-        this.setData({ post: Object.assign({}, this.data.post, { views: views }) })
-      }
-    }).catch(() => {})
   },
 
   // 从编辑页回来时刷新，避免还显示旧正文
@@ -36,27 +31,46 @@ Page({
     }
   },
 
+  // 一次请求拿全：正文 + 点赞/收藏 + 第一页评论 + 详情页广告（postDetail 云函数）
   loadAll() {
     this.setData({ loading: true })
-    Promise.all([
-      api.fetchPost(this.postId),
-      api.fetchComments(this.postId),
-    ])
-      .then((res) => {
-        const detail = res[0]
+    const withView = !this._viewOnce
+    api.fetchPostBundle(this.postId, { withView: withView })
+      .then((detail) => {
+        this._viewOnce = true
+        const post = detail.post
         this.setData({
-          post: detail.post,
+          post: post,
           liked: !!detail.liked,
           favorited: !!detail.favorited,
-          comments: res[1] || [],
+          comments: detail.comments || [],
+          detailAd: detail.ad || null,
           loading: false,
         })
+        if (detail.ad && !this._detailAdViewReported) {
+          this._detailAdViewReported = true
+          api.reportAd(detail.ad.id, 'view')
+        }
       })
       .catch((err) => {
         console.error('打开帖子失败', err)
         this.setData({ loading: false })
         wx.showToast({ title: '加载失败，看控制台', icon: 'none' })
       })
+  },
+
+  // 详情页广告：点击上报 + 按配置跳转
+  onDetailAdTap() {
+    const ad = this.data.detailAd
+    if (!ad) return
+    api.reportAd(ad.id, 'click')
+    if (ad.linkType === 'post' && ad.linkValue) {
+      wx.navigateTo({ url: '/pages/detail/detail?id=' + encodeURIComponent(ad.linkValue) })
+    } else if (ad.linkType === 'page' && ad.linkValue) {
+      wx.navigateTo({ url: ad.linkValue })
+    } else {
+      wx.showToast({ title: '广告位展示中', icon: 'none' })
+    }
   },
 
   // 点赞 / 取消点赞（云端由 likePost 云函数处理）

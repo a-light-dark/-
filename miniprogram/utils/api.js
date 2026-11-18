@@ -1170,6 +1170,54 @@ function fetchComments(postId) {
   })
 }
 
+// 详情页一次拿全：正文 + 点赞/收藏状态 + 第一页评论 + 详情页广告
+// 老代码是 fetchPost + fetchComments + incView 三次云函数，现在合并成 postDetail 一次
+function fetchPostBundle(postId, opts) {
+  const id = String(postId || '')
+  // 浏览量 5 分钟内同一帖子只算一次（跟原来 incView 的节流一致）
+  const now = Date.now()
+  const last = viewedAt[id] || 0
+  const withView = !(opts && opts.withView === false) && now - last > 5 * 60 * 1000
+  if (withView) viewedAt[id] = now
+  return run(function () {
+    return wx.cloud
+      .callFunction({ name: 'postDetail', data: { postId: id, withView: withView } })
+      .then(function (r) {
+        const res = (r && r.result) || {}
+        if (!res.ok) throw new Error(res.msg || '帖子不存在或已删除')
+        return resolveImages([res.post || {}]).then(function (posts) {
+          const post = normalizePost(posts[0] || {})
+          const comments = (res.comments || []).map(normalizeComment)
+          return resolveAdImages(res.ad ? [res.ad] : []).then(function (ads) {
+            return {
+              post: post,
+              liked: !!res.liked,
+              favorited: !!res.favorited,
+              comments: buildCommentTree(comments),
+              commentCount: Number(res.commentCount || 0),
+              ad: ads[0] || null,
+              offline: false,
+            }
+          })
+        })
+      })
+  }, function () {
+    const found = mock.POSTS.filter(function (p) { return String(p.id) === id })[0]
+    const comments = (mock.COMMENTS || [])
+      .filter(function (c) { return String(c.postId) === id })
+      .map(normalizeLocalComment)
+    return {
+      post: found ? normalizeLocalPost(found) : null,
+      liked: found ? !!found.likedByMe : false,
+      favorited: !!localFavorites[id],
+      comments: buildCommentTree(comments),
+      commentCount: found ? Number(found.commentCount || 0) : 0,
+      ad: null,
+      offline: true,
+    }
+  })
+}
+
 // 把扁平的评论列表整理成「顶层评论 + replies」两层结构
 function buildCommentTree(list) {
   const byId = {}
@@ -1858,6 +1906,7 @@ module.exports = {
   topicMeta: topicMeta,
   searchPosts: searchPosts,
   fetchPost: fetchPost,
+  fetchPostBundle: fetchPostBundle,
   createPost: createPost,
   toggleLike: toggleLike,
   fetchComments: fetchComments,

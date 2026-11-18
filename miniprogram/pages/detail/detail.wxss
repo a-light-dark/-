@@ -334,3 +334,21 @@
 }
 
 
+
+/* 详情页底部广告位（样式与首页广告一致） */
+.ad-card {
+  margin: 20rpx 24rpx 0;
+  border-radius: 16rpx;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+.ad-hover { opacity: 0.9; }
+.ad-img { display: block; width: 100%; height: 200rpx; }
+.ad-bar { display: flex; align-items: center; padding: 16rpx 24rpx; background: #fff; }
+.ad-tag {
+  flex: none; margin-right: 14rpx; padding: 2rpx 10rpx; border-radius: 6rpx;
+  border: 2rpx solid #cfd8d3; font-size: 20rpx; color: #8a948f;
+}
+.ad-title { flex: 1; min-width: 0; font-size: 26rpx; color: #222; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ad-go { flex: none; margin-left: 8rpx; color: #bbb; font-size: 32rpx; }

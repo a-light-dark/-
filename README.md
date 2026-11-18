@@ -88,7 +88,7 @@ campus-forum/
 │       ├── account/         # 注销账号
 │       ├── feedback/        # 建议反馈（提交 + 我的记录）
 │       └── feedback-admin/  # 反馈管理（圈主）
-├── cloudfunctions/          # 云函数（20 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / siteData / viewPost / adminReview / feedback / adminApi / setupCollections）
+├── cloudfunctions/          # 云函数（22 个：login / likePost / addComment / deleteComment / grabOrder / orderReview / createPost / createOrder / updateProfile / updatePost / deletePost / deleteAccount / reportPost / notices / siteData / viewPost / adminReview / feedback / adminApi / setupCollections）
 └── tools/check.js           # 自检脚本
 ```
 
@@ -120,7 +120,7 @@ campus-forum/
 
 > `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` / `trash` / `wordfilters` / `backups` 是后加的，不用手动建：调用一次 `setupCollections` 云函数就会建好（在开发者工具里给云函数发个空参数即可，已存在会跳过）。
 
-- 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（20 个都要）
+- 云函数部署：左侧 `cloudfunctions` 下右键每个文件夹 → **「上传并部署：云端安装依赖」**（22 个都要）
 - 云存储：头像存 `avatars/<openid>/时间戳.png`，帖子图存 `posts/<openid>/时间戳-随机数.png`；云开发控制台 → 存储 里能看到（免费额度够用）
 - ⚠️ **云存储权限必须是「所有用户可读，仅创建者可读写」**（控制台 → 存储 → 权限设置）。如果不是，别人帖子的图片会显示 `STORAGE_EXCEED_AUTHORITY` 加载不出来。列表里的图片客户端会先用 `getTempFileURL` 换成临时 https 链接再显示，真机上更稳
 - 发帖图片：客户端先压到 quality 70 再上传；云函数校验「必须是自己传到 `posts/<openid>/` 下的文件」，并逐张做图片内容检测（同步接口单张上限 750KB）
@@ -248,7 +248,7 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 - 读取：`api.fetchComments` 一次性取 100 条，`buildCommentTree` 在本地拼两层（顶层按时间倒序，回复按时间正序；父评论被删的回复会自动降级成顶层，不会消失）
 - 通知：有人回复你的评论，通知发给你（不是帖子作者）；`addComment` 写 notices 时按「有 parentId 就通知被回复人」处理
 
-**浏览量**：进详情页时调 `viewPost` 云函数给 `posts.views` 原子 +1；同一个人 5 分钟内看同一条帖子只计一次（客户端做了节流，减少无效写）。详情页统计行是「👍 点赞 / ⭐ 收藏 / 👀 浏览 / 💬 评论」。
+**浏览量**：详情页现在走 `postDetail` 云函数，一次请求返回「正文 + 点赞/收藏状态 + 第一页评论 + 详情页底部广告」，服务端同时给 `posts.views` 原子 +1；同一个人 5 分钟内看同一条帖子只计一次（客户端节流）。详情页统计行是「👍 点赞 / ⭐ 收藏 / 👀 浏览 / 💬 评论」。
 
 **排序**：首页帖子流上方有「最新 / 最热 / 浏览」三个 chip。
 
@@ -586,7 +586,7 @@ $env:VITE_MOCK='true'; npm run dev   # Windows PowerShell
 2. `npm run build`，把 `dist/` 上传到 云开发 → 静态网站托管
 3. 打开控制台给的网址，账号 `admin` / 密码 `campus2026`，登录后到「运营配置 → 修改登录密码」改掉
 
-> 云函数 21 个（多了 `adminLogin`、`adminApi`），集合 24 个（含 `admin_sessions`、`admin_accounts`、`approvals`、`meta`、`wordlist`、`ads`、`backups`）。
+> 云函数 22 个（多了 `adminLogin`、`adminApi`），集合 24 个（含 `admin_sessions`、`admin_accounts`、`approvals`、`meta`、`wordlist`、`ads`、`backups`）。
 
 
 ### 管理后台的身份与权限（RBAC）

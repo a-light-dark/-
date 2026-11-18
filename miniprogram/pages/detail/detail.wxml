@@ -68,6 +68,16 @@
     </view>
   </view>
 
+  <!-- 详情页底部广告位（后端 postDetail 一并返回，只在投放时间窗内出现） -->
+  <view wx:if="{{post && detailAd}}" class="ad-card" hover-class="ad-hover" bindtap="onDetailAdTap">
+    <image class="ad-img" src="{{detailAd.image}}" mode="aspectFill" lazy-load />
+    <view class="ad-bar">
+      <text class="ad-tag">广告</text>
+      <text class="ad-title">{{detailAd.title}}</text>
+      <text class="ad-go">›</text>
+    </view>
+  </view>
+
   <!-- 评论列表（楼中楼：顶层评论 + replies） -->
   <view wx:if="{{post}}">
     <view class="comments-title" id="comments">全部评论（{{post.commentCount || 0}}）</view>
