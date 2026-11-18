@@ -157,6 +157,13 @@
     <view wx:if="{{!loading && comments.length === 0}}" class="empty">
       还没有评论，来抢沙发！
     </view>
+
+    <!-- 评论分页：滑到底自动加载下一批 -->
+    <view wx:if="{{comments.length > 0}}" class="comment-more">
+      <text wx:if="{{commentMoreLoading}}">正在加载更多评论…</text>
+      <text wx:elif="{{commentHasMore}}">上拉加载更多评论</text>
+      <text wx:else>没有更多评论了</text>
+    </view>
   </view>
 
   <!-- 底部占位，防止内容被输入栏挡住 -->

@@ -14,6 +14,8 @@ Page({
     inputFocus: false,
     replyPlaceholder: '说点什么…',
     detailAd: null,   // 详情页底部广告位
+    commentHasMore: false,   // 还有没有更多评论
+    commentMoreLoading: false,
   },
 
   onLoad(options) {
@@ -35,15 +37,17 @@ Page({
   loadAll() {
     this.setData({ loading: true })
     const withView = !this._viewOnce
-    api.fetchPostBundle(this.postId, { withView: withView })
+    api.fetchPostBundle(this.postId, { withView: withView, commentLimit: 30 })
       .then((detail) => {
         this._viewOnce = true
         const post = detail.post
+        this._commentRows = detail.commentRows || []
         this.setData({
           post: post,
           liked: !!detail.liked,
           favorited: !!detail.favorited,
           comments: detail.comments || [],
+          commentHasMore: !!detail.commentHasMore,
           detailAd: detail.ad || null,
           loading: false,
         })
@@ -56,6 +60,27 @@ Page({
         console.error('打开帖子失败', err)
         this.setData({ loading: false })
         wx.showToast({ title: '加载失败，看控制台', icon: 'none' })
+      })
+  },
+
+  // 滑到底：再取 30 条评论（只查评论，不重复查帖子/广告）
+  onReachBottom() {
+    if (!this.data.commentHasMore || this.data.commentMoreLoading) return
+    const rows = this._commentRows || []
+    this.setData({ commentMoreLoading: true })
+    api.fetchCommentsMore(this.postId, rows.length, 30)
+      .then((res) => {
+        const next = rows.concat(res.comments || [])
+        this._commentRows = next
+        this.setData({
+          comments: api.buildCommentTree(next),
+          commentHasMore: !!res.hasMore,
+          commentMoreLoading: false,
+        })
+      })
+      .catch(() => {
+        this.setData({ commentMoreLoading: false })
+        wx.showToast({ title: '加载失败，稍后再试', icon: 'none' })
       })
   },
 
@@ -410,6 +435,9 @@ Page({
         } else {
           comments = [comment].concat(comments)
         }
+        // 同步一份扁平列表，后面「加载更多」要接着往这个数组上拼
+        const rows = this._commentRows || []
+        this._commentRows = isReply ? rows.concat([comment]) : [comment].concat(rows)
 
         this.setData({
           comments: comments,

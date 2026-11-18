@@ -10,16 +10,23 @@ exports.main = async (event) => {
   const postId = String(event.postId || '').trim()
   if (!postId) return { ok: false, msg: '缺少帖子 id' }
 
+  // 评论分页参数：默认一次 30 条，最多 100 条；commentFrom 是已拿到的条数（跳过这么多）
+  const limit = Math.min(Math.max(Number(event.commentLimit) || 30, 1), 100)
+  const from = Math.max(Number(event.commentFrom) || 0, 0)
+  const withPost = event.withPost !== false
+
   let post = null
-  try {
-    const r = await db.collection('posts').doc(postId).get()
-    post = r.data
-  } catch (err) {
-    return { ok: false, msg: '帖子不存在或已删除' }
+  if (withPost) {
+    try {
+      const r = await db.collection('posts').doc(postId).get()
+      post = r.data
+    } catch (err) {
+      return { ok: false, msg: '帖子不存在或已删除' }
+    }
   }
 
-  let views = Number(post.views || 0)
-  if (event.withView !== false) {
+  let views = post ? Number(post.views || 0) : 0
+  if (withPost && event.withView !== false) {
     try {
       await db.collection('posts').doc(postId).update({ data: { views: _.inc(1) } })
       views = views + 1
@@ -29,22 +36,41 @@ exports.main = async (event) => {
   }
 
   let liked = false
-  try {
-    const l = await db.collection('likes').where({ postId: postId, _openid: OPENID }).limit(1).get()
-    liked = !!(l.data && l.data.length)
-  } catch (err) {}
+  if (withPost) {
+    try {
+      const l = await db.collection('likes').where({ postId: postId, _openid: OPENID }).limit(1).get()
+      liked = !!(l.data && l.data.length)
+    } catch (err) {}
+  }
 
   let favorited = false
+  if (withPost) {
+    try {
+      const f = await db.collection('favorites').where({ postId: postId, _openid: OPENID }).limit(1).get()
+      favorited = !!(f.data && f.data.length)
+    } catch (err) {}
+  }
+
+  // 多取一条用来判断还有没有下一页
+  let comments = []
+  let hasMore = false
   try {
-    const f = await db.collection('favorites').where({ postId: postId, _openid: OPENID }).limit(1).get()
-    favorited = !!(f.data && f.data.length)
+    const c = await db
+      .collection('comments')
+      .where({ postId: postId })
+      .orderBy('createdAt', 'desc')
+      .skip(from)
+      .limit(limit + 1)
+      .get()
+    const rows = c.data || []
+    hasMore = rows.length > limit
+    comments = hasMore ? rows.slice(0, limit) : rows
   } catch (err) {}
 
-  let comments = []
-  try {
-    const c = await db.collection('comments').where({ postId: postId }).orderBy('createdAt', 'desc').limit(100).get()
-    comments = c.data || []
-  } catch (err) {}
+  // 只取评论（滑到底加载更多）时，不查帖子/广告，省时间
+  if (!withPost) {
+    return { ok: true, comments: comments, commentFrom: from, commentLimit: limit, hasMore: hasMore }
+  }
 
   let ad = null
   try {
@@ -79,6 +105,9 @@ exports.main = async (event) => {
     favorited: favorited,
     comments: comments,
     commentCount: Number(post.commentCount || 0),
+    commentFrom: from,
+    commentLimit: limit,
+    hasMore: hasMore,
     ad: ad,
   }
 }

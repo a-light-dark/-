@@ -352,3 +352,10 @@
 }
 .ad-title { flex: 1; min-width: 0; font-size: 26rpx; color: #222; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .ad-go { flex: none; margin-left: 8rpx; color: #bbb; font-size: 32rpx; }
+/* comment pagination */
+.comment-more {
+  padding: 20rpx 0 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #9aa3a8;
+}

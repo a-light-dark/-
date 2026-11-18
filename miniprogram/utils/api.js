@@ -1195,22 +1195,28 @@ function fetchPostBundle(postId, opts) {
   const last = viewedAt[id] || 0
   const withView = !(opts && opts.withView === false) && now - last > 5 * 60 * 1000
   if (withView) viewedAt[id] = now
+  const commentLimit = Number((opts && opts.commentLimit) || 30)
   return run(function () {
     return wx.cloud
-      .callFunction({ name: 'postDetail', data: { postId: id, withView: withView } })
+      .callFunction({
+        name: 'postDetail',
+        data: { postId: id, withView: withView, commentLimit: commentLimit },
+      })
       .then(function (r) {
         const res = (r && r.result) || {}
         if (!res.ok) throw new Error(res.msg || '帖子不存在或已删除')
         return resolveImages([res.post || {}]).then(function (posts) {
           const post = normalizePost(posts[0] || {})
-          const comments = (res.comments || []).map(normalizeComment)
+          const rows = (res.comments || []).map(normalizeComment)
           return resolveAdImages(res.ad ? [res.ad] : []).then(function (ads) {
             return {
               post: post,
               liked: !!res.liked,
               favorited: !!res.favorited,
-              comments: buildCommentTree(comments),
+              comments: buildCommentTree(rows),
+              commentRows: rows,
               commentCount: Number(res.commentCount || 0),
+              commentHasMore: !!res.hasMore,
               ad: ads[0] || null,
               offline: false,
             }
@@ -1228,9 +1234,32 @@ function fetchPostBundle(postId, opts) {
       favorited: !!localFavorites[id],
       comments: buildCommentTree(comments),
       commentCount: found ? Number(found.commentCount || 0) : 0,
+      commentHasMore: false,
       ad: null,
       offline: true,
     }
+  })
+}
+
+// 详情页滑到底：只取下一页评论（withPost:false，不重复查帖子/广告）
+function fetchCommentsMore(postId, from, limit) {
+  const id = String(postId || '')
+  const start = Math.max(Number(from) || 0, 0)
+  const size = Math.min(Math.max(Number(limit) || 30, 1), 100)
+  return run(function () {
+    return wx.cloud
+      .callFunction({
+        name: 'postDetail',
+        data: { postId: id, withPost: false, commentFrom: start, commentLimit: size },
+      })
+      .then(function (r) {
+        const res = (r && r.result) || {}
+        if (!res.ok) throw new Error(res.msg || '加载失败')
+        const rows = (res.comments || []).map(normalizeComment)
+        return { comments: rows, hasMore: !!res.hasMore, from: start, limit: size }
+      })
+  }, function () {
+    return { comments: [], hasMore: false, from: start, limit: size }
   })
 }
 
@@ -1923,6 +1952,8 @@ module.exports = {
   searchHotWords: searchHotWords,
   fetchPost: fetchPost,
   fetchPostBundle: fetchPostBundle,
+  fetchCommentsMore: fetchCommentsMore,
+  buildCommentTree: buildCommentTree,
   createPost: createPost,
   toggleLike: toggleLike,
   fetchComments: fetchComments,
