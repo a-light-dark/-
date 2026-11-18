@@ -12,7 +12,44 @@ const db = cloud.database()
 const COLLECTIONS = [
   'ads','posts', 'comments', 'orders', 'users', 'likes', 'favorites', 'reports', 'notices', 'feedback', 'follows', 'reviews', 'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters', 'backups', 'admin_sessions', 'admin_accounts', 'approvals', 'meta', 'wordlist', 'login_attempts', 'security_alerts', 'search_hot']
 
+// 这个函数会建集合，也带一批「塞/删测试数据」的开关，不能让普通用户随便调。
+// 规则：带后台 token 的圈主/管理员随时可用；全新环境（还没建出管理员账号）只放行「建集合」，
+// 方便第一次部署时 bootstrap，塞数据/删数据仍然必须有 token。
+async function adminFromToken(token) {
+  if (!token) return null
+  try {
+    const r = await db.collection('admin_sessions').where({ token: String(token) }).limit(1).get()
+    const s = (r.data || [])[0]
+    if (!s) return null
+    if (Number(s.expiresAt || 0) <= Date.now()) return null
+    const role = String(s.role || '')
+    if (role !== 'owner' && role !== 'admin') return null
+    return s
+  } catch (err) {
+    return null
+  }
+}
+
 exports.main = async (event) => {
+  const ev = event || {}
+  const wantsSeed = !!(ev.seedPost || ev.removePostId || ev.seedNotice || ev.removeNoticeId ||
+    ev.seedReport || ev.seedFeedback || ev.seedBulk || ev.cleanupBulk)
+
+  const admin = await adminFromToken(ev.token)
+  if (!admin) {
+    let hasAccounts = false
+    try {
+      const c = await db.collection('admin_accounts').count()
+      hasAccounts = (c.total || 0) > 0
+    } catch (err) {
+      hasAccounts = false
+    }
+    // 新环境首次部署：还没有管理员账号时，允许只做「建集合 + 初始化文档」
+    if (hasAccounts || wantsSeed) {
+      return { ok: false, code: 'NEED_ADMIN', msg: '这个工具只有圈主/管理员能用：先登录后台拿到 token，调用时带上 token' }
+    }
+  }
+
   const result = {}
 
   for (let i = 0; i < COLLECTIONS.length; i++) {

@@ -20,7 +20,7 @@
 | `search/`（`action:'hot'`） | 热搜词榜：返回搜索次数前 10；每次真实搜索第 1 页会把词计数 +1（`search_hot` 集合，`_id` 就是词本身） | 搜一次写一次太贵，只记第一页；表没建时返回空数组，前端用默认词兜底 |
 | `search/` | 服务端分页搜索（正文模糊 + 话题精确），一次返回 20 条 + `hasMore` | 之前客户端只拉最近 100 条本地过滤，帖子多了搜不全 |
 | `board/` | 本周榜单：热帖 Top5 + 活跃同学 Top5（最近 7 天，服务端算完只回 10 条，60 秒缓存） | 以前是客户端拉 100 条帖子 + 200 条评论在本地算，一次进榜 400+ 次文档读、两个请求 |
-| `maintain/` | 数据库维护：`action:'scan'` 抽样看各集合时间字段类型；`action:'migrate'` 把 ISO 字符串时间批量转成 `Date`（默认 dryRun） | 字符串时间会让 `createdAt >= 今天` 这类范围查询一条都查不到，得在服务端批量修 |
+| `maintain/` | 数据库维护：`action:'scan'` 抽样看各集合时间字段类型；`action:'migrate'` 把 ISO 字符串时间批量转成 `Date`（默认 dryRun） | 字符串时间会让 `createdAt >= 今天` 这类范围查询一条都查不到，得在服务端批量修；**只认后台登录 token**（`admin_sessions` 里角色为圈主/管理员），不带 token 返回 `NEED_ADMIN` |
 | `deleteAccount/` | 注销账号：删自己的资料与全部内容 | 要跨集合批量删数据、改别人的帖子计数；有未完成订单时先拦下 |
 | `reportPost/` | 举报帖子（写 `reports` 集合） | 举报记录不能由客户端直接写；理由白名单 + 防重复举报 |
 | `notices/` | 消息通知：列表 / 未读数 / 单条已读 / 一键已读（类型 comment/like/order/**system**，system 是圈主处理举报/反馈后的结果通知） | 通知文档的 `_openid` 是发送者，收件人读不到，只能按 `toOpenid` 由服务端查 |
@@ -33,7 +33,7 @@
 | `updatePost/` | 编辑自己的帖子（内容安全检测；只能改正文和话题，图片不动） | 要校验作者身份并过内容安全；客户端没有权限改已发布的帖子 |
 | `adminLogin/` | PC 网页后台的账号密码登录：sha256 校验密码（存 `settings`）、发 7 天 token 存 `admin_sessions`、支持 logout / whoami / changePassword | 网页端没有 openid，只能用账号体系；密码不能明文入库 |
 | `adminApi/` | 管理后台网关：仪表盘 / 帖子·评论·举报·反馈·用户管理 / 公告 / 运营配置 / 审计日志 / 回收站 / 敏感词库 / 数据备份（全部动作过管理员白名单 + 写 `audit_logs`；处理举报/反馈后会给当事人发「系统」消息，文案可在运营配置里改） | 管理动作不能由客户端直写；白名单和审计只能放服务端；封禁会改 `users.banned` 并被 5 个写入口校验 |
-| `setupCollections/` | 开发辅助：建 `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` 集合，测试用 seed/cleanup | 集合只能建在服务端；`seedPost`/`seedReport`/`seedNotice`/`seedOrder` 造的数据用来模拟「别人发的」 |
+| `setupCollections/` | 开发辅助：建 `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` 集合，测试用 seed/cleanup | 集合只能建在服务端；`seedPost`/`seedReport`/`seedNotice`/`seedOrder` 造的数据用来模拟「别人发的」；**种子/清理必须带后台 token**（全新环境还没有管理员账号时，只放行「建集合」） |
 
 ## 内容安全（msgSecCheck）怎么用
 

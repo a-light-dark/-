@@ -404,7 +404,7 @@ tcb hosting deploy admin/web/dist                          # 部署 PC 后台静
 顺手做的两件事：
 
 - `board` 云函数：本周榜单从「客户端拉 100 条帖子 + 200 条评论」改成服务端算完只回 10 条，60 秒缓存。
-- `maintain` 云函数：发现历史数据里 `createdAt` 混进了 ISO 字符串（会让「今天/最近 7 天」的范围查询直接失效），已批量转成 `Date`（46 条文档、0 失败）；以后再遇到用 `tcb fn invoke maintain --params '{"action":"scan"}'` 先抽样。
+- `maintain` 云函数：发现历史数据里 `createdAt` 混进了 ISO 字符串（会让「今天/最近 7 天」的范围查询直接失效），已批量转成 `Date`（46 条文档、0 失败）；以后再遇到用 `tcb fn invoke maintain --params '{"action":"scan","token":"<后台 token>"}'` 先抽样（该函数现在只认后台登录 token，普通用户调不动）。
 - 后台列表不再查总数：举报 / 帖子 / 建议反馈三页原来是「先 `count()` 全表扫一遍再取一页」，条数多了等于每次翻页都交两份钱。现在改成「多取一条判断有没有下一页」（`hasMore`），分页器只显示上一页/下一页，首屏少一次全表 count；工作台那 8 个 KPI 仍然保留 30 秒缓存。
 
 ## 备份 / 恢复、安全告警、冒烟脚本

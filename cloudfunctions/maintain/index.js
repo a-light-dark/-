@@ -14,6 +14,22 @@ const COLLECTIONS = [
   'users', 'follows', 'favorites', 'likes', 'bans',
 ]
 
+// 这个函数能批量改数据，绝不能对普通用户开放：必须是后台登录过的圈主/管理员
+async function adminFromToken(token) {
+  if (!token) return null
+  try {
+    const r = await db.collection('admin_sessions').where({ token: String(token) }).limit(1).get()
+    const s = (r.data || [])[0]
+    if (!s) return null
+    if (Number(s.expiresAt || 0) <= Date.now()) return null
+    const role = String(s.role || '')
+    if (role !== 'owner' && role !== 'admin') return null
+    return s
+  } catch (err) {
+    return null
+  }
+}
+
 function kindOf(v) {
   if (v === null || v === undefined) return 'null'
   if (v instanceof Date) return 'date'
@@ -89,6 +105,10 @@ async function migrate(name, field, dryRun) {
 }
 
 exports.main = async (event) => {
+  const admin = await adminFromToken(event && event.token)
+  if (!admin) {
+    return { ok: false, code: 'NEED_ADMIN', msg: '这个工具只有圈主/管理员能用：先登录后台拿到 token，调用时带上 token' }
+  }
   const action = String((event && event.action) || 'scan')
   if (action === 'scan') {
     return { ok: true, action: 'scan', collections: await scan() }

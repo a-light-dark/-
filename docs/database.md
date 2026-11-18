@@ -68,16 +68,20 @@
 - 写入统一用 `db.serverDate()`（云函数里）或 `new Date()`（一次性脚本），**不要** `new Date().toISOString()`。
 - 原因：范围查询（`createdAt >= 今天 0 点`、最近 7 天）对字符串是**直接查不到**的，而且排序结果也会乱。
 - 历史数据已经踩过这个坑（帖子/评论/消息/订单/举报/用户/封禁里混进了 ISO 字符串），已经用 `maintain` 云函数统一转成 `Date`：46 条文档，0 失败。
-- 以后再遇到，跑一遍：
+- 以后再遇到，跑一遍（`maintain` 现在只认后台登录 token，先登录拿一个）：
 
 ```bash
-# 抽样看类型
-tcb fn invoke maintain --params '{"action":"scan"}'
-# 试算（不写库）
-tcb fn invoke maintain --params '{"action":"migrate","collections":["posts","comments"],"dryRun":true}'
-# 真转
-tcb fn invoke maintain --params '{"action":"migrate","collections":["posts","comments"],"dryRun":false}'
+# 1) 拿 token（密码换成你自己的）
+tcb fn invoke adminLogin --params '{"action":"login","username":"admin","password":"campus2026"}'
+# 2) 抽样看类型
+tcb fn invoke maintain --params '{"action":"scan","token":"<上一步返回的 token>"}'
+# 3) 试算（不写库）
+tcb fn invoke maintain --params '{"action":"migrate","collections":["posts","comments"],"dryRun":true,"token":"<token>"}'
+# 4) 真转
+tcb fn invoke maintain --params '{"action":"migrate","collections":["posts","comments"],"dryRun":false,"token":"<token>"}'
 ```
+
+> 为什么要 token：`maintain` 能批量改数据，之前它对任何小程序用户都开放（任何人不带 token 都能触发写入），属于权限漏洞；现在已经改成只允许圈主/管理员。`setupCollections` 同理：带 token 才能塞/删测试数据，全新环境还没建管理员账号时只放行「建集合」。
 
 ## 4. 查询姿势（写代码时照这个来）
 
