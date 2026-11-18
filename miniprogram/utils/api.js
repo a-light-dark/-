@@ -404,7 +404,19 @@ function normalizeAd(a) {
     position: String((a && a.position) || 'home_banner'),
     linkType: String((a && a.linkType) || 'none'),
     linkValue: String((a && a.linkValue) || ''),
+    startAt: Number((a && a.startAt) || 0),
+    endAt: Number((a && a.endAt) || 0),
   }
+}
+
+// 广告只在投放时间窗内展示：服务端算过一次，客户端读缓存时再判一次，避免缓存里的广告过期还在
+function liveAds(list) {
+  const now = Date.now()
+  return (list || []).filter(function (a) {
+    if (a.startAt && a.startAt > now) return false
+    if (a.endAt && a.endAt < now) return false
+    return true
+  })
 }
 
 // 广告图如果是云存储 fileID，换成临时 https 链接，<image> 能直接显示
@@ -468,8 +480,17 @@ function reportAd(id, type) {
 function fetchHomeMeta(force) {
   const empty = { hot: null, topics: [], announcements: [], bannerText: '', ads: [] }
   const cached = wx.getStorageSync('homeMeta') || null
+  function fromCache() {
+    const base = (cached && cached.meta) || empty
+    const list = liveAds(base.ads || [])
+    return {
+      unchanged: true,
+      meta: Object.assign({}, base, { ads: list }),
+      staleAd: list.length !== ((base.ads || []).length),
+    }
+  }
   if (!cloudReady()) {
-    return Promise.resolve({ unchanged: true, meta: (cached && cached.meta) || empty })
+    return Promise.resolve(fromCache())
   }
   return wx.cloud
     .callFunction({
@@ -478,7 +499,7 @@ function fetchHomeMeta(force) {
     })
     .then(function (r) {
       const res = (r && r.result) || {}
-      if (res.unchanged && cached) return { unchanged: true, meta: cached.meta }
+      if (res.unchanged && cached) return fromCache()
       if (!res.ok) throw new Error(res.msg || '首页数据加载失败')
       const topics = (res.topics || []).map(function (t) {
         const m = topicMeta(t.tag)
@@ -491,7 +512,7 @@ function fetchHomeMeta(force) {
           topics: topics,
           announcements: (res.announcements || []).slice(0, 3),
           bannerText: res.bannerText || '',
-          ads: ads
+          ads: liveAds(ads)
             .filter(function (a) {
               return (a.position || 'home_banner') === 'home_banner'
             })
@@ -502,7 +523,7 @@ function fetchHomeMeta(force) {
       })
     })
     .catch(function (err) {
-      if (cached && cached.meta) return { unchanged: true, meta: cached.meta }
+      if (cached && cached.meta) return fromCache()
       throw err
     })
 }

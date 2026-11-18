@@ -41,7 +41,7 @@
 - `pages/admin-settings/admin-settings` 运营配置（管理台进入：首页 banner 文案等 4 个运营参数 + 最近操作审计日志）
 - `pages/admin-trash/admin-trash` 回收站（管理台进入：管理端删掉的帖子和评论，可恢复或彻底删除）
 - `pages/admin-words/admin-words` 敏感词库（管理台进入：加校园特有的拦截词，发帖/评论/悬赏会先本地拦一道）
-- `pages/admin-backup/admin-backup` 数据备份（管理台进入：一键导出 17 个集合的 JSON 到云存储，可复制下载链接/删除旧备份）
+- `pages/admin-backup/admin-backup` 数据备份（管理台进入：一键导出 20 个集合的 JSON 到云存储，可复制下载链接/删除旧备份）
 
 ## 数据是怎么走的
 
@@ -95,7 +95,7 @@ campus-forum/
 ## 云开发配置（当前环境）
 
 - 环境 ID：`cloud1-d6g26wz61eca836b8`（已写进 `miniprogram/app.js` 的 `CLOUD_ENV`）
-- 云开发控制台 → 数据库 → 需要 15 个集合，读写权限按下面的表格来（`posts` / `users` / `comments` / `likes` / `orders` 用**自定义安全规则** `{"read": true, "write": false}` 只开放读；微信预设里的「所有用户可读」其实还带着创建者可写，别用）：
+- 云开发控制台 → 数据库 → 需要 24 个集合，读写权限按下面的表格来（`posts` / `users` / `comments` / `likes` / `orders` 用**自定义安全规则** `{"read": true, "write": false}` 只开放读；微信预设里的「所有用户可读」其实还带着创建者可写，别用）：
 
 | 集合 | 存什么 | 权限 |
 |---|---|---|
@@ -192,7 +192,7 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 - 运营配置 4 项全部生效：`bannerText`（首页横幅）、`announcementEnabled`（公告开关）、`reportReplyText`（处理举报后，举报人会收到一条「系统」消息，默认「你举报的内容我们看过了…」）、`feedbackReplyText`（反馈标记已处理后通知提交人）。系统消息在「消息 → 系统」tab 里。
 - M4 回收站已上线：管理端删掉的帖子和评论会先存 `trash` 集合，回收站里可「恢复」或「彻底删除」；恢复的帖子不带回它原来的点赞/评论/图片（那些删的时候就清掉了）。
 - M4 敏感词库已上线：圈主在「敏感词库」里加的词，会先于微信审核在发帖/评论/发悬赏时本地拦截（上限 200 个、每个 20 字以内）；微信 msgSecCheck 继续兜底。
-- M4 数据备份已上线：圈主在「数据备份」里一键把 17 个集合导出成 JSON 存到云存储（超过 8MB 会拒绝），可复制下载链接保存到电脑/网盘，也能删除旧备份。建议每周备份一次。
+- M4 数据备份已上线：圈主在「数据备份」里一键把 20 个集合导出成 JSON 存到云存储（超过 8MB 会拒绝），可复制下载链接保存到电脑/网盘，也能删除旧备份。建议每周备份一次。
 - 下一步 M3：换公司主体后做独立 Web 后台（Vue3 + Element Plus），复用同一个 `adminApi`。
 
 ## 建议反馈（用户提想法 / 圈主处理）
@@ -360,7 +360,7 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 
 - **流量看板**（Web 后台 / 小程序管理台同数据）：近 7/14/30 天新增帖子、评论、同学柱状图；帖子总数 / 浏览总量 / 点赞 / 互助单 / 活跃同学（7 天内发过帖或评论）；浏览最多、点赞最多 Top5；话题分布。数据来自 `adminApi` 的 `analytics.overview`（扫最近 1000 条聚合，不额外花钱）。
 - **真实 UV/PV 不在云开发里**：微信小程序后台 → 统计 → 访问分析，才有启动次数、访问人数、留存；本页是「内容与互动流量」。
-- **广告位**：集合 `ads`（22 个集合之一），字段 `title/image/position/linkType/linkValue/weight/enabled/startAt/endAt/views/clicks`。位置 `home_banner`（首页 banner，已接入小程序首页）和 `detail_bottom`（详情页底部，接口已留、前端未放）。管理台「广告管理」负责增删改、开关、看曝光/点击/点击率。
+- **广告位**：集合 `ads`（24 个集合之一），字段 `title/image/position/linkType/linkValue/weight/enabled/startAt/endAt/views/clicks`。位置 `home_banner`（首页 banner，已接入小程序首页）和 `detail_bottom`（详情页底部，接口已留、前端未放）。管理台「广告管理」负责增删改、开关、看曝光/点击/点击率。
 - **广告下发接口**：`siteData`（公开云函数）返回 `ads` 数组，只给 `enabled=true` 且在投放时间窗内、按 `weight` 倒序；小程序端 `api.fetchSiteData()` 拿到的 `ads` 已把云存储 fileID 换成临时 https 链接。
 - **曝光/点击上报**：`siteData` 的 `adReport` 动作（`{action:'adReport', id, type:'view|click'}`），小程序端 `api.reportAd(id, type)` 封装；首页加载时曝光一次、点广告时点击一次。
 - **屏蔽词命中**：`wordfilters` 每个词多了 `hits`/`lastHitAt`；`createPost`/`addComment`/`createOrder` 命中时自动 `inc(1)`。Web 敏感词库支持「批量导入（一行一个/逗号分隔，单次 ≤100）」「复制全部」「按命中次数排序」，能直接看出哪类内容最常被拦。
@@ -567,7 +567,7 @@ node tools/check.js
 | 运营配置 | banner 文案、公告开关、举报/反馈话术 + 改登录密码 + 操作日志 |
 | 回收站 | 恢复/彻底删除已删内容 |
 | 敏感词库 | 加词/删词（上限 200） |
-| 数据备份 | 一键导出 17 个集合为 JSON、拿下载链接、删除备份 |
+| 数据备份 | 一键导出 20 个集合为 JSON、拿下载链接、删除备份 |
 
 技术栈：Vue 3 + Vite + Element Plus + `@cloudbase/js-sdk`；鉴权用「账号密码换 token」（token 存 `admin_sessions`，7 天过期）。
 
@@ -586,7 +586,7 @@ $env:VITE_MOCK='true'; npm run dev   # Windows PowerShell
 2. `npm run build`，把 `dist/` 上传到 云开发 → 静态网站托管
 3. 打开控制台给的网址，账号 `admin` / 密码 `campus2026`，登录后到「运营配置 → 修改登录密码」改掉
 
-> 云函数 20 个（多了 `adminLogin`），集合 19 个（多了 `admin_sessions`）。
+> 云函数 21 个（多了 `adminLogin`、`adminApi`），集合 24 个（含 `admin_sessions`、`admin_accounts`、`approvals`、`meta`、`wordlist`、`ads`、`backups`）。
 
 
 ### 管理后台的身份与权限（RBAC）

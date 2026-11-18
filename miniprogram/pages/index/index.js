@@ -89,6 +89,11 @@ Page({
         this._adViewReported = true
         api.reportAd(patch.indexAd.id, 'view')
       }
+      // 缓存里的广告刚过期：强制刷一次，避免首页一直挂着过期广告
+      if (res && res.staleAd && !this._adRefreshing) {
+        this._adRefreshing = true
+        this.loadHomeMeta(true).then(() => { this._adRefreshing = false }, () => { this._adRefreshing = false })
+      }
     }).catch(() => {})
   },
 

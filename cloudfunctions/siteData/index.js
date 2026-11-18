@@ -62,6 +62,8 @@ async function loadConfig() {
           position: a.position || 'home_banner',
           linkType: a.linkType || 'none',
           linkValue: a.linkValue || '',
+          startAt: Number(a.startAt) || 0,
+          endAt: Number(a.endAt) || 0,
         }
       })
   } catch (err) {}

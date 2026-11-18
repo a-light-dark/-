@@ -2,7 +2,7 @@
   <div class="page">
     <div class="page-head">
       <div>
-        <div class="page-sub">把数据库 17 个集合导出成一个 JSON 存到云存储（超过 8MB 会拒绝，先清一些数据）</div>
+        <div class="page-sub">把数据库 20 个集合导出成一个 JSON 存到云存储（超过 8MB 会拒绝，先清一些数据）</div>
       </div>
       <div style="display: flex; gap: 10px">
         <el-button :loading="loading" @click="load">刷新</el-button>
@@ -20,7 +20,7 @@
         </el-table-column>
         <el-table-column label="说明" min-width="240">
           <template #default="{ row }">
-            <span class="muted">包含 posts / comments / orders / users 等 17 个集合的快照</span>
+            <span class="muted">包含 posts / comments / orders / users / ads / admin_accounts 等 20 个集合的快照</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="240" align="right">

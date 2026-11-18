@@ -59,9 +59,9 @@
           <el-input v-model="form.title" maxlength="40" show-word-limit placeholder="例如：双十一驾校体验活动" />
         </el-form-item>
         <el-form-item label="图片地址" required>
-          <el-input v-model="form.image" placeholder="https://… 或云存储 cloud:// 地址" />
+          <el-input v-model="form.image" placeholder="cloud:// 开头的云存储地址" />
           <div class="muted small" style="margin-top: 4px">
-            建议 750×300 左右的横图；小程序里会按 200rpx 高裁切
+            只支持本小程序云存储里的图片（cloud:// 开头，会做图片内容检测）；建议 750×300 横图，小程序里按 200rpx 高裁切
           </div>
         </el-form-item>
         <el-form-item label="位置">
@@ -211,6 +211,9 @@ function openEdit(row) {
 async function save() {
   if (!form.title.trim()) return ElMessage.warning('标题不能为空')
   if (!form.image.trim()) return ElMessage.warning('图片地址不能为空')
+  if (form.image.trim().indexOf('cloud://') !== 0) {
+    return ElMessage.warning('广告图只支持云存储图片（cloud:// 开头），外链图会被服务端拒绝')
+  }
   if (form.linkType === 'post' && !form.linkValue.trim()) return ElMessage.warning('填一下帖子 id')
   if (form.linkType === 'page' && !form.linkValue.trim()) return ElMessage.warning('填一下页面路径')
   const payload = Object.assign({}, form, {

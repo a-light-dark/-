@@ -524,6 +524,7 @@ const BACKUP_COLLECTIONS = [
   'posts', 'comments', 'orders', 'users', 'likes', 'favorites',
   'reports', 'notices', 'feedback', 'follows', 'reviews',
   'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters',
+  'ads', 'admin_accounts', 'approvals',
 ]
 
 async function fetchAll(name) {
@@ -1232,10 +1233,40 @@ function adPayload(event) {
   return { title: title, image: image, position: position, linkType: linkType, linkValue: linkValue, weight: weight, startAt: startAt, endAt: endAt, enabled: enabled }
 }
 
+async function checkAdImage(image) {
+  if (image.indexOf('cloud://') !== 0) {
+    return { ok: false, msg: '广告图请用本小程序云存储里的图片（cloud:// 开头），外链图不接收' }
+  }
+  try {
+    const f = await cloud.downloadFile({ fileID: image })
+    const buf = f.fileContent
+    if (!buf || !buf.length) return { ok: false, msg: '图片读不到，换一张试试' }
+    if (buf.length > 750 * 1024) return { ok: false, msg: '图片超过 750KB，换一张小一点的' }
+    let contentType = 'image/png'
+    const lower = image.toLowerCase()
+    if (lower.indexOf('.jpg') > -1 || lower.indexOf('.jpeg') > -1) contentType = 'image/jpeg'
+    else if (lower.indexOf('.webp') > -1) contentType = 'image/webp'
+    else if (lower.indexOf('.gif') > -1) contentType = 'image/gif'
+    try {
+      const res = await cloud.openapi.security.imgSecCheck({ media: { contentType: contentType, value: buf } })
+      if (Number(res.errCode) === 87014) return { ok: false, msg: '这张广告图可能不太合适，换一张' }
+    } catch (err) {
+      const code = Number(err && (err.errCode || err.err_code))
+      if (code === 87014) return { ok: false, msg: '这张广告图可能不太合适，换一张' }
+      console.warn('广告图检测失败（先放行）', code, err && (err.errMsg || err.message))
+    }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, msg: '图片读不到（' + ((err && err.errCode) || '') + '），换一张试试' }
+  }
+}
+
 async function adsSave(event) {
   const p = adPayload(event)
   if (!p.title) return { ok: false, msg: '标题不能为空' }
   if (!p.image) return { ok: false, msg: '图片地址不能为空' }
+  const img = await checkAdImage(p.image)
+  if (!img.ok) return img
   if (p.linkType === 'post' && !p.linkValue) return { ok: false, msg: '跳转帖子请填帖子 id' }
   if (p.linkType === 'page' && !p.linkValue) return { ok: false, msg: '跳转页面请填页面路径' }
   try {

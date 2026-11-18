@@ -7,7 +7,7 @@
   <block wx:if="{{checked && isAdmin}}">
     <view class="head">
       <view class="head-title">💾 数据备份</view>
-      <view class="head-desc">把 17 个集合（帖子/评论/订单/用户…）导出成一个 JSON 文件存到云存储。建议每周备份一次，下载保存到电脑或网盘。共 {{total}} 份。</view>
+      <view class="head-desc">把 20 个集合（帖子/评论/订单/用户/广告/后台账号…）导出成一个 JSON 文件存到云存储。建议每周备份一次，下载保存到电脑或网盘。共 {{total}} 份。</view>
     </view>
 
     <view class="card backup-now">
