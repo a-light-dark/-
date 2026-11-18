@@ -9,6 +9,23 @@ const crypto = require('crypto')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+
+// 内容安全接口失败时记一条告警，后台「安全告警」页能看到（写失败不影响业务）
+function logSecFail(kind, scene, err, extra) {
+  try {
+    db.collection('security_alerts').add({
+      data: {
+        kind: kind,
+        scene: scene || '',
+        code: Number((err && (err.errCode || err.code)) || 0),
+        message: String((err && (err.errMsg || err.message)) || ''),
+        extra: String(extra || '').slice(0, 200),
+        openid: (cloud.getWXContext() || {}).OPENID || '',
+        createdAt: db.serverDate(),
+      },
+    }).then(function () {}, function () {})
+  } catch (e) { /* 忽略 */ }
+}
 const _ = db.command
 
 // 管理员 openid 白名单：想加人就把 openid 加进来（第一个是超管，能任免管理员）
@@ -82,19 +99,21 @@ const MUTATIONS = [
   'announcements.create', 'announcements.update', 'announcements.remove', 'settings.set',
   'trash.restore', 'trash.purge', 'wordfilters.add', 'wordfilters.remove',
   'ads.save', 'ads.remove', 'ads.toggle',
-  'backup.create', 'backup.remove',
+  'backup.create', 'backup.remove', 'backup.restore',
   'accounts.create', 'accounts.setRole', 'accounts.setPassword', 'accounts.setActive', 'accounts.remove',
   'approvals.approve', 'approvals.reject',
 ]
 
-const OPERATOR_READ = ['dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'audit.list', 'trash.list', 'wordfilters.list', 'posts.trace', 'analytics.overview', 'ads.list']
+const OPERATOR_READ = ['security.list', 'dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'audit.list', 'trash.list', 'wordfilters.list', 'posts.trace', 'analytics.overview', 'ads.list']
 const OPERATOR_WRITE = ['posts.remove', 'posts.setTop', 'comments.remove', 'reports.dismiss', 'reports.removePost', 'feedback.resolve', 'announcements.create', 'announcements.update', 'announcements.remove', 'wordfilters.add', 'wordfilters.remove', 'ads.save', 'ads.remove', 'ads.toggle']
-const ANALYST_READ = ['dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'trash.list', 'wordfilters.list', 'analytics.overview', 'ads.list']
+const ANALYST_READ = ['security.list', 'dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'trash.list', 'wordfilters.list', 'analytics.overview', 'ads.list']
 
 function allowRole(role, action) {
   if (!role) return false
   // 账号管理只给圈主
   if (action.indexOf('accounts.') === 0) return role === 'owner'
+  // 从备份恢复会覆盖线上数据，只给圈主/管理员；开发者要恢复得先发审核单
+  if (action === 'backup.restore') return role === 'owner' || role === 'admin'
   // 审核列表开发者可以看（只看自己提交的），通过/驳回只有圈主/管理员能做
   if (action === 'approvals.list') return role === 'owner' || role === 'admin' || role === 'developer'
   if (action.indexOf('approvals.') === 0) return role === 'owner' || role === 'admin'
@@ -551,6 +570,38 @@ async function fetchAll(name) {
   return out
 }
 
+async function securityList(event) {
+  const page = Math.max(1, Number(event && event.page) || 1)
+  const pageSize = Math.min(50, Math.max(10, Number(event && event.pageSize) || 20))
+  const kind = String((event && event.kind) || '').trim()
+  let base = db.collection('security_alerts')
+  if (kind) base = db.collection('security_alerts').where({ kind: kind })
+  let countRes
+  let listRes
+  try {
+    countRes = await base.count()
+    listRes = await base.orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
+  } catch (err) {
+    return { ok: false, msg: '告警表还没建（跑一次 setupCollections 就行）' }
+  }
+  return {
+    ok: true,
+    list: (listRes.data || []).map(function (a) {
+      return {
+        id: a._id,
+        kind: a.kind || 'text',
+        scene: a.scene || '',
+        code: a.code || 0,
+        message: a.message || '',
+        extra: a.extra || '',
+        openid: a.openid || '',
+        createdAt: ts(a.createdAt),
+      }
+    }),
+    total: countRes.total || 0,
+  }
+}
+
 async function backupCreate() {
   const out = {}
   for (let i = 0; i < BACKUP_COLLECTIONS.length; i++) {
@@ -627,6 +678,127 @@ async function backupRemove(id) {
   }
   await db.collection('backups').doc(id).remove()
   return { ok: true }
+}
+
+// 从备份文件恢复：dryRun 只统计条数，真正恢复时按 _id 覆盖写回（幂等，重复跑结果一样）
+async function backupRestore(event) {
+  const id = event && event.id
+  if (!id) return { ok: false, msg: '缺少备份记录 id' }
+  let doc
+  try {
+    doc = await db.collection('backups').doc(id).get()
+  } catch (err) {
+    return { ok: false, msg: '这条备份记录不存在了' }
+  }
+  const fileID = doc.data && doc.data.fileID
+  if (!fileID) return { ok: false, msg: '这条备份没有文件记录' }
+  let json
+  try {
+    const f = await cloud.downloadFile({ fileID: fileID })
+    json = JSON.parse(f.fileContent.toString('utf8'))
+  } catch (err) {
+    return { ok: false, msg: '读备份文件失败：' + ((err && (err.errMsg || err.message)) || '未知错误') }
+  }
+  const names = Object.keys(json || {}).filter(function (k) { return BACKUP_COLLECTIONS.indexOf(k) > -1 })
+  if (!names.length) return { ok: false, msg: '备份里没有可恢复的集合' }
+  const counts = {}
+  let total = 0
+  names.forEach(function (n) {
+    const arr = Array.isArray(json[n]) ? json[n] : []
+    counts[n] = arr.length
+    total += arr.length
+  })
+  if (event.dryRun !== false) return { ok: true, dryRun: true, collections: counts, total: total }
+  if (total > 5000) return { ok: false, msg: '这份备份有 ' + total + ' 条文档，单次最多恢复 5000 条' }
+
+  const warnings = []
+
+  // 单个文档写回：先整条覆盖，失败退成合并更新（保住已有的 _openid 归属）
+  async function putOne(name, raw) {
+    const docId = raw && raw._id
+    if (!docId) return false
+    const data = Object.assign({}, raw)
+    delete data._id
+    try {
+      await db.collection(name).doc(docId).set({ data: data })
+      return true
+    } catch (err) {
+      try {
+        const patch = Object.assign({}, data)
+        delete patch._openid
+        await db.collection(name).doc(docId).update({ data: patch })
+        if (warnings.length < 5) warnings.push(name + '/' + docId + '：用合并方式恢复')
+        return true
+      } catch (err2) {
+        try {
+          const plain = Object.assign({}, data)
+          delete plain._openid
+          await db.collection(name).doc(docId).set({ data: plain })
+          if (warnings.length < 5) warnings.push(name + '/' + docId + '：归属字段没恢复')
+          return true
+        } catch (err3) {
+          if (warnings.length < 5) warnings.push(name + '/' + docId + '：' + ((err3 && (err3.errMsg || err3.message)) || '写入失败'))
+          return false
+        }
+      }
+    }
+  }
+
+  // 把备份里所有文档摊平成一条队列，按 from/limit 分批写：
+  // 云函数一次调用只能跑几秒，几百条一次写完必然超时，所以前端循环调。
+  const plan = []
+  names.forEach(function (name) {
+    const arr = Array.isArray(json[name]) ? json[name] : []
+    arr.forEach(function (raw) {
+      if (raw && raw._id) plan.push({ name: name, raw: raw })
+    })
+  })
+
+  const from = Math.max(0, Number(event.from) || 0)
+  const limit = Math.max(1, Math.min(200, Number(event.limit) || 50))
+  const slice = plan.slice(from, from + limit)
+  const restored = {}
+  const CONCURRENCY = Math.max(1, Math.min(20, Number(event.concurrency) || 10))
+  let j = 0
+  while (j < slice.length) {
+    const batch = slice.slice(j, j + CONCURRENCY)
+    j += CONCURRENCY
+    const flags = await Promise.all(batch.map(function (item) { return putOne(item.name, item.raw) }))
+    for (let k = 0; k < flags.length; k++) {
+      if (!flags[k]) continue
+      const name = batch[k].name
+      restored[name] = (restored[name] || 0) + 1
+    }
+  }
+
+  const next = from + slice.length
+  const done = next >= plan.length
+
+  // 全部恢复完再让客户端重新拉数据（版本号变了才会刷新缓存）
+  if (done) {
+    try {
+      await bumpConfigVersion()
+    } catch (err) {}
+    try {
+      const v = await db.collection('meta').doc('versions').get()
+      const content = Number((v.data && v.data.content) || 0)
+      await db.collection('meta').doc('versions').update({ data: { content: content + 1 } })
+    } catch (err) {}
+  }
+
+  return {
+    ok: true,
+    dryRun: false,
+    from: from,
+    next: next,
+    limit: limit,
+    done: done,
+    written: slice.length,
+    progress: plan.length ? Math.round((next / plan.length) * 100) : 100,
+    collections: restored,
+    total: plan.length,
+    warnings: warnings,
+  }
 }
 
 // ============ 举报处理 ============
@@ -1293,6 +1465,7 @@ async function checkAdImage(image) {
       const code = Number(err && (err.errCode || err.err_code))
       if (code === 87014) return { ok: false, msg: '这张广告图可能不太合适，换一张' }
       console.warn('广告图检测失败（先放行）', code, err && (err.errMsg || err.message))
+      logSecFail('image', 'ad', err, image)
     }
     return { ok: true }
   } catch (err) {
@@ -1529,6 +1702,9 @@ exports.main = async (event) => {
           await audit('wordfilters.remove', 'wordfilter', event.id, '')
         }
         break
+      case 'security.list':
+        res = await securityList(event)
+        break
       case 'backup.create':
         res = await backupCreate()
         if (res.ok) await audit('backup.create', 'backup', res.id, String(res.size || 0) + 'B')
@@ -1539,6 +1715,13 @@ exports.main = async (event) => {
       case 'backup.download':
         res = await backupDownload(event.id)
         break
+      case 'backup.restore': {
+        res = await backupRestore(event)
+        if (res.ok && !res.dryRun) {
+          await audit('backup.restore', 'backup', event.id, JSON.stringify(res.collections))
+        }
+        break
+      }
       case 'backup.remove':
         res = await backupRemove(event.id)
         if (res.ok) await audit('backup.remove', 'backup', event.id, '')

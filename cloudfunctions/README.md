@@ -21,6 +21,7 @@
 | `deleteAccount/` | 注销账号：删自己的资料与全部内容 | 要跨集合批量删数据、改别人的帖子计数；有未完成订单时先拦下 |
 | `reportPost/` | 举报帖子（写 `reports` 集合） | 举报记录不能由客户端直接写；理由白名单 + 防重复举报 |
 | `notices/` | 消息通知：列表 / 未读数 / 单条已读 / 一键已读（类型 comment/like/order/**system**，system 是圈主处理举报/反馈后的结果通知） | 通知文档的 `_openid` 是发送者，收件人读不到，只能按 `toOpenid` 由服务端查 |
+| `adminApi/` 的 `backup.restore` | 从云存储的备份 JSON 恢复：`{id, dryRun, from, limit, concurrency}`，每批 ≤200 条（默认 50、并发 10），返回 `{done, written, next, progress, collections}` | 云函数单次只跑 3 秒，一次写几百条会超时，所以必须在网页端循环分批调用 |
 | `siteData/` | 公开数据网关：代读「公告」「首页 banner 文案」「广告位」，并接收广告曝光/点击上报（`{action:'adReport', id, type:'view|click'}`） | 公告/配置/广告集合对用户不可读写；广告下发按 enabled + 投放时间窗 + weight 过滤，曝光点击用 `_.inc(1)` 原子累加 |
 | `adminReview/` | 举报处理：是否管理员 / 举报列表 / 删帖 / 忽略举报（管理员 openid 白名单） | 要删别人的帖子，客户端没权限；白名单放服务端，客户端改不了 |
 | `feedback/` | 建议反馈：提交 / 我的反馈 / 管理员列表 / 标记已处理 / 删除 | 用户写的文字进官方反馈列表，需要服务端校验长度与身份；管理员动作走白名单 |

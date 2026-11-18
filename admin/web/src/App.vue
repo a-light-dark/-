@@ -57,6 +57,7 @@ const MENUS = [
   { path: '/feedback', icon: '💬', label: '建议反馈', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
   { path: '/announcements', icon: '📢', label: '公告管理', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
   { path: '/words', icon: '🚫', label: '敏感词库', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
+  { path: '/security', icon: '🛡️', label: '安全告警', roles: ['owner', 'developer', 'admin', 'operator', 'analyst'] },
   { path: '/trash', icon: '🗑️', label: '回收站', roles: ['owner', 'developer', 'admin', 'operator'] },
   { path: '/settings', icon: '⚙️', label: '运营配置', roles: ['owner', 'developer', 'admin'] },
   { path: '/backup', icon: '💾', label: '数据备份', roles: ['owner', 'developer', 'admin'] },

@@ -6,7 +6,8 @@ export default defineConfig({
   base: './',
   plugins: [vue()],
   build: {
-    outDir: 'dist',
+    // 演示模式（VITE_MOCK=true）单独输出到 dist-mock，避免把假数据构建传上线
+    outDir: process.env.VITE_MOCK === 'true' ? 'dist-mock' : 'dist',
     target: 'esnext',
     chunkSizeWarningLimit: 1200,
   },

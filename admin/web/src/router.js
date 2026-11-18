@@ -14,6 +14,7 @@ import Accounts from './views/Accounts.vue'
 import Approvals from './views/Approvals.vue'
 import Analytics from './views/Analytics.vue'
 import Ads from './views/Ads.vue'
+import Security from './views/Security.vue'
 import { getToken } from './api.js'
 
 const router = createRouter({
@@ -36,6 +37,7 @@ const router = createRouter({
     { path: '/accounts', component: Accounts, meta: { title: '账号管理', ownerOnly: true } },
     { path: '/analytics', component: Analytics, meta: { title: '流量看板' } },
     { path: '/ads', component: Ads, meta: { title: '广告管理' } },
+    { path: '/security', component: Security, meta: { title: '安全告警' } },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 })

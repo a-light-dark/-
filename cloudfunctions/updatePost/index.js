@@ -5,6 +5,28 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+
+// 内容安全接口本身失败（没权限 / 超频 / 网络）时会先放行，这里记一条告警，
+// 后台「安全告警」页能看到最近有哪些请求是被"放行"的。告警写失败不影响业务。
+function logSecFail(kind, scene, err, extra) {
+  try {
+    const code = Number((err && (err.errCode || err.code)) || 0)
+    const db2 = cloud.database()
+    db2.collection('security_alerts').add({
+      data: {
+        kind: kind,
+        scene: scene || '',
+        code: code,
+        message: String((err && (err.errMsg || err.message)) || ''),
+        extra: String(extra || '').slice(0, 200),
+        openid: (cloud.getWXContext() || {}).OPENID || '',
+        createdAt: db2.serverDate(),
+      },
+    }).then(function () {}, function () {})
+  } catch (e) {
+    // 连告警都写不进去就算了，别影响主流程
+  }
+}
 const posts = db.collection('posts')
 
 const TOPIC_NAMES = [
@@ -25,6 +47,7 @@ async function checkText(content, scene, openid) {
     return { ok: suggest === 'pass', suggest: suggest || 'pass', apiError: false }
   } catch (err) {
     console.warn('msgSecCheck 调用失败（先放行）', err && err.errCode, err && err.errMsg)
+    logSecFail('text', 'post-edit', err, content)
     return { ok: true, suggest: 'unknown', apiError: true }
   }
 }

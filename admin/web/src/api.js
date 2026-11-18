@@ -156,6 +156,10 @@ export const fetchBackups = () => callAdmin('backup.list')
 export const createBackup = () => callAdmin('backup.create')
 export const downloadBackup = (id) => callAdmin('backup.download', { id })
 export const removeBackup = (id) => callAdmin('backup.remove', { id })
+// dryRun=true 只统计条数；dryRun=false 真正写回（云函数一次只能跑几秒，按 from/limit 分批调）
+export const restoreBackup = (id, dryRun = true, opts = {}) => callAdmin('backup.restore', Object.assign({ id, dryRun: dryRun !== false }, opts || {}))
+
+export const fetchSecurityAlerts = (page = 1, kind = '') => callAdmin('security.list', { page, kind })
 
 export const fetchIsAdmin = () => callAdmin('isAdmin')
 

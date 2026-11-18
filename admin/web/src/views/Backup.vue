@@ -23,28 +23,31 @@
             <span class="muted">包含 posts / comments / orders / users / ads / admin_accounts 等 20 个集合的快照</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" align="right">
+        <el-table-column label="操作" width="330" align="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" plain @click="onDownload(row)">下载链接</el-button>
+            <el-button v-if="canRestore" size="small" type="warning" plain @click="onRestore(row)">恢复</el-button>
             <el-button size="small" type="danger" plain @click="onRemove(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
       <div class="muted" style="margin-top: 10px">
-        下载链接是云存储的临时地址，把 JSON 存到电脑上就是一份完整备份；恢复数据需要人工导回（或让我写一个恢复脚本）。
+        下载链接是云存储的临时地址，把 JSON 存到电脑上就是一份完整备份。「恢复」会按文档 id 覆盖写回线上数据（幂等，可重复执行），恢复前会先试算每个集合的条数。
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { createBackup, downloadBackup, fetchBackups, removeBackup } from '../api.js'
+import { createBackup, downloadBackup, fetchBackups, fetchMe, removeBackup, restoreBackup } from '../api.js'
 
 const list = ref([])
 const loading = ref(false)
 const creating = ref(false)
+const role = ref('')
+const canRestore = computed(() => role.value === 'owner' || role.value === 'admin')
 
 function time(ms) {
   if (!ms) return '—'
@@ -120,5 +123,70 @@ async function onRemove(row) {
   }
 }
 
-onMounted(load)
+async function onRestore(row) {
+  let dry
+  try {
+    dry = await restoreBackup(row.id, true)
+  } catch (err) {
+    ElMessage.error('连不上云开发：' + (err.message || err))
+    return
+  }
+  if (!dry || dry.ok === false) {
+    ElMessage.error((dry && dry.msg) || '读备份失败')
+    return
+  }
+  const detail = Object.keys(dry.collections || {})
+    .filter((k) => dry.collections[k] > 0)
+    .map((k) => k + ' ' + dry.collections[k])
+    .join('、')
+  try {
+    await ElMessageBox.confirm(
+      `这份备份有 ${dry.total} 条文档：${detail}。恢复会用备份里的内容覆盖同 id 的线上数据，确定继续？`,
+      '恢复数据',
+      { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '先不恢复' }
+    )
+  } catch (err) {
+    return
+  }
+  try {
+    // 分批写回：每批 50 条，直到后端说 done（一次写完会超过云函数超时）
+    const merged = {}
+    let from = 0
+    let guard = 0
+    let last = null
+    while (guard++ < 100) {
+      const r = await restoreBackup(row.id, false, { from, limit: 50 })
+      if (!r || r.ok === false) {
+        ElMessage.error((r && r.msg) || '恢复失败（第 ' + Math.round(from / 50 + 1) + ' 批）')
+        return
+      }
+      last = r
+      Object.keys(r.collections || {}).forEach((k) => {
+        merged[k] = (merged[k] || 0) + r.collections[k]
+      })
+      from = r.next
+      if (r.done) break
+    }
+    const done = Object.keys(merged)
+      .map((k) => k + ' ' + merged[k])
+      .join('、')
+    ElMessage.success('已恢复 ' + from + ' 条：' + done)
+    if (last && last.warnings && last.warnings.length) {
+      ElMessage.warning('有 ' + last.warnings.length + ' 条没完全恢复：' + last.warnings[0])
+    }
+    load()
+  } catch (err) {
+    ElMessage.error('恢复失败：' + (err.message || err))
+  }
+}
+
+onMounted(async () => {
+  load()
+  try {
+    const me = await fetchMe()
+    if (me && me.ok) role.value = me.role || ''
+  } catch (err) {
+    role.value = ''
+  }
+})
 </script>

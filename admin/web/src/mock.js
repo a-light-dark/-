@@ -158,6 +158,13 @@ const BACKUPS = Array.from({ length: 2 }, (_, i) => ({
   time: '11-1' + (5 + i) + ' 09:2' + i,
 }))
 
+// 内容安全接口失败（放行）的告警
+const SECURITY = [
+  { id: 'sec_0', kind: 'text', scene: 'post', code: 45009, message: 'reach max api daily quota limit', extra: '想找人一起上自习，图书馆三楼靠窗', openid: '_dHI2hMA', createdAt: now - 3600 * 1000 },
+  { id: 'sec_1', kind: 'image', scene: 'avatar', code: 40001, message: 'invalid credential, access_token is invalid', extra: 'cloud://cloud1-xxx/avatar/a.png', openid: 'cOPENID01', createdAt: now - 7200 * 1000 },
+  { id: 'sec_2', kind: 'text', scene: 'comment', code: 45009, message: 'reach max api daily quota limit', extra: '这条评论是一段测试内容', openid: 'cOPENID02', createdAt: now - 86400 * 1000 },
+]
+
 const AUDIT = Array.from({ length: 12 }, (_, i) => ({
   id: 'audit_' + i,
   action: ['posts.setTop', 'users.ban', 'reports.removePost', 'settings.set', 'backup.create'][i % 5],
@@ -332,8 +339,20 @@ export function mockCall(name, data) {
     return { ok: true }
   }
 
+  if (action === 'security.list') {
+    const kind = String(d.kind || '')
+    const rows = SECURITY.filter((s) => !kind || s.kind === kind)
+    return { ok: true, list: rows, total: rows.length }
+  }
+
   if (action === 'backup.download') {
     return { ok: true, url: 'https://example.com/backup-demo.json' }
+  }
+
+  if (action === 'backup.restore') {
+    const counts = { posts: 6, comments: 5, users: 3, settings: 2 }
+    if (d.dryRun !== false) return { ok: true, dryRun: true, collections: counts, total: 16 }
+    return { ok: true, dryRun: false, collections: counts, total: 16, warnings: [] }
   }
 
   if (
