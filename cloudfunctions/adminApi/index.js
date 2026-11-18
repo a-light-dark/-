@@ -259,11 +259,15 @@ async function postsList(event) {
   if (keyword) where.content = db.RegExp({ regexp: esc(keyword), options: 'i' })
 
   const query = db.collection('posts').where(where)
-  const [countRes, listRes] = await Promise.all([
-    query.count(),
-    query.orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get(),
-  ])
-  const list = (listRes.data || []).map(function (p) {
+  // 不查总数（count 要全表扫一遍）：多取一条判断还有没有下一页
+  const listRes = await query
+    .orderBy('createdAt', 'desc')
+    .skip((page - 1) * pageSize)
+    .limit(pageSize + 1)
+    .get()
+  const rows = listRes.data || []
+  const hasMore = rows.length > pageSize
+  const list = rows.slice(0, pageSize).map(function (p) {
     return {
       id: p._id,
       content: p.content,
@@ -279,7 +283,7 @@ async function postsList(event) {
       createdAt: ts(p.createdAt),
     }
   })
-  return { ok: true, list: list, total: countRes.total, hasMore: page * pageSize < countRes.total }
+  return { ok: true, list: list, page: page, pageSize: pageSize, hasMore: hasMore }
 }
 
 async function setPostTop(postId, top) {
@@ -819,10 +823,16 @@ async function backupRestore(event) {
 async function reportsList(event) {
   const page = Math.max(1, Number(event && event.page) || 1)
   const pageSize = Math.min(50, Math.max(5, Number(event && event.pageSize) || 20))
-  const countRes = await db.collection('reports').count()
-  const total = countRes.total || 0
-  const res = await db.collection('reports').orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
-  const reports = res.data || []
+  // 不查总数：多取一条就知道还有没有下一页（count 会全表扫）
+  const res = await db
+    .collection('reports')
+    .orderBy('createdAt', 'desc')
+    .skip((page - 1) * pageSize)
+    .limit(pageSize + 1)
+    .get()
+  const rows = res.data || []
+  const hasMore = rows.length > pageSize
+  const reports = rows.slice(0, pageSize)
   const postIds = reports.map(function (r) { return r.postId }).filter(Boolean)
   let posts = []
   if (postIds.length) {
@@ -845,10 +855,9 @@ async function reportsList(event) {
     list: reports.map(function (r) {
       return { id: r._id, postId: r.postId, reason: r.reason, createdAt: ts(r.createdAt), post: postMap[r.postId] || null }
     }),
-    total: total,
     page: page,
     pageSize: pageSize,
-    hasMore: page * pageSize < total,
+    hasMore: hasMore,
   }
 }
 
@@ -976,12 +985,18 @@ async function setUserRole(openid, role) {
 async function feedbackList(event) {
   const page = Math.max(1, Number(event && event.page) || 1)
   const pageSize = Math.min(50, Math.max(5, Number(event && event.pageSize) || 20))
-  const countRes = await db.collection('feedback').count()
-  const total = countRes.total || 0
-  const res = await db.collection('feedback').orderBy('createdAt', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
+  // 不查总数：多取一条判断有没有下一页
+  const res = await db
+    .collection('feedback')
+    .orderBy('createdAt', 'desc')
+    .skip((page - 1) * pageSize)
+    .limit(pageSize + 1)
+    .get()
+  const rows = res.data || []
+  const hasMore = rows.length > pageSize
   return {
     ok: true,
-    list: (res.data || []).map(function (f) {
+    list: rows.slice(0, pageSize).map(function (f) {
       return {
         id: f._id,
         content: f.content,
@@ -992,10 +1007,9 @@ async function feedbackList(event) {
         ts: ts(f.createdAt),
       }
     }),
-    total: total,
     page: page,
     pageSize: pageSize,
-    hasMore: page * pageSize < total,
+    hasMore: hasMore,
   }
 }
 

@@ -2,7 +2,7 @@
   <div class="page">
     <div class="page-head">
       <div>
-        <div class="page-sub">共 {{ total }} 条建议 · 标记已处理会给提交人发一条系统消息（文案在「运营配置」里改）</div>
+        <div class="page-sub">第 {{ page }} 页 · 每页 {{ pageSize }} 条 · 标记已处理会给提交人发一条系统消息（文案在「运营配置」里改）</div>
       </div>
       <el-button :loading="loading" @click="load(page)">刷新</el-button>
     </div>
@@ -36,8 +36,8 @@
 
       <div class="pager">
         <el-pagination
-          layout="prev, pager, next, total"
-          :total="total"
+          layout="prev, next"
+          :total="pagerTotal"
           :page-size="pageSize"
           :current-page="page"
           @current-change="load"
@@ -48,15 +48,16 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fetchFeedback, removeFeedback, resolveFeedback } from '../api.js'
 
 const list = ref([])
-const total = ref(0)
+const hasMore = ref(false)
 const page = ref(1)
 const pageSize = 20
 const loading = ref(false)
+const pagerTotal = computed(() => (page.value - 1) * pageSize + list.value.length + (hasMore.value ? 1 : 0))
 
 function time(ms) {
   if (!ms) return '—'
@@ -74,7 +75,7 @@ async function load(p = 1) {
       return
     }
     list.value = r.list || []
-    total.value = r.total || 0
+    hasMore.value = !!r.hasMore
     page.value = p
   } catch (err) {
     ElMessage.error('连不上云开发：' + (err.message || err))
