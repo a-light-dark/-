@@ -27,7 +27,10 @@ function isOwner(openid) {
 // token → {username, role} 的内存缓存（60 秒），省掉每次管理操作都查一次 admin_sessions
 const tokenCache = new Map()
 
-// Web 后台登录态：admin_sessions 里的 token（有效期 7 天），session 里带角色
+// Web 后台登录态：admin_sessions 里的 token（12 小时，用到一半会自动续期）
+const SESSION_TTL = 12 * 3600 * 1000
+const SESSION_RENEW_AFTER = 6 * 3600 * 1000
+
 async function resolveToken(token) {
   if (!token) return null
   const key = String(token)
@@ -40,7 +43,18 @@ async function resolveToken(token) {
     const exp = Number(s.expiresAt || 0)
     if (exp < Date.now()) return null
     const actor = { username: s.username || 'admin', role: s.role || 'admin' }
-    tokenCache.set(key, { username: actor.username, role: actor.role, until: Math.min(exp, Date.now() + 60000) })
+    // 滑动续期：剩余不到一半时自动往后延，常来用的人不用反复登录；不常来的自然过期
+    let until = exp
+    if (exp - Date.now() < SESSION_RENEW_AFTER) {
+      until = Date.now() + SESSION_TTL
+      try {
+        await db.collection('admin_sessions').doc(s._id).update({ data: { expiresAt: until, renewedAt: Date.now() } })
+      } catch (err) {
+        console.warn('续期 session 失败', err && err.message)
+        until = exp
+      }
+    }
+    tokenCache.set(key, { username: actor.username, role: actor.role, until: Math.min(until, Date.now() + 60000) })
     return actor
   } catch (err) {
     return null

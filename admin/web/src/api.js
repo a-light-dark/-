@@ -14,13 +14,14 @@ export const isMock = MOCK
 
 export function getToken() {
   // 演示模式下不用真的登录也能看页面
-  if (MOCK) return localStorage.getItem(TOKEN_KEY) || 'mock-token'
-  return localStorage.getItem(TOKEN_KEY) || ''
+  if (MOCK) return sessionStorage.getItem(TOKEN_KEY) || 'mock-token'
+  // 用 sessionStorage：关掉浏览器就失效，减少 token 被恶意脚本读走的窗口
+  return sessionStorage.getItem(TOKEN_KEY) || ''
 }
 
 export function setToken(t) {
-  if (t) localStorage.setItem(TOKEN_KEY, t)
-  else localStorage.removeItem(TOKEN_KEY)
+  if (t) sessionStorage.setItem(TOKEN_KEY, t)
+  else sessionStorage.removeItem(TOKEN_KEY)
 }
 
 async function ensureApp() {

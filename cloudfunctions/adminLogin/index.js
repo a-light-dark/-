@@ -13,7 +13,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const LEGACY_KEY = 'adminPasswordHash'
 const DEFAULT_PASSWORD = 'campus2026' // 第一次登录用这个密码，登录后请在网页里改掉
-const SESSION_TTL = 7 * 24 * 3600 * 1000
+const SESSION_TTL = 12 * 3600 * 1000 // 12 小时，并且每次正常操作会滑动续期（见 adminApi）
 
 const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest('hex')
 
@@ -124,6 +124,35 @@ function lockMessage(lockedUntil) {
   return '密码错太多次了，' + mins + ' 分钟后再试（或者让圈主在后台重置密码）'
 }
 
+// ===== 全局兜底限流 =====
+// 按账号锁挡不住「换用户名一直试」，所以再加一道：整个环境 1 分钟最多 30 次登录尝试。
+const GLOBAL_LIMIT = 30
+const GLOBAL_WINDOW = 60 * 1000
+
+async function bumpGlobal() {
+  const key = 'g:all'
+  const now = Date.now()
+  const doc = await readAttempt(key)
+  if (!doc) {
+    try {
+      await db.collection('login_attempts').add({ data: { key, count: 1, firstAt: now, lastAt: now, lockedUntil: 0 } })
+    } catch (err) {
+      console.warn('记录全局尝试失败', err && err.message)
+    }
+    return 1
+  }
+  const inWindow = now - Number(doc.firstAt || 0) < GLOBAL_WINDOW
+  const count = (inWindow ? Number(doc.count || 0) : 0) + 1
+  try {
+    await db.collection('login_attempts').doc(doc._id).update({
+      data: { count, firstAt: inWindow ? doc.firstAt : now, lastAt: now },
+    })
+  } catch (err) {
+    console.warn('更新全局尝试失败', err && err.message)
+  }
+  return count
+}
+
 exports.main = async (event) => {
   const action = String(event.action || 'login')
 
@@ -181,6 +210,11 @@ exports.main = async (event) => {
   const username = String(event.username || '').trim()
   const password = String(event.password || '')
   if (!username || !password) return { ok: false, msg: '请输入账号和密码' }
+
+  const globalCount = await bumpGlobal()
+  if (globalCount > GLOBAL_LIMIT) {
+    return { ok: false, msg: '登录太频繁了，歇一分钟再试', locked: true }
+  }
 
   const key = attemptKey(username)
   const attempt = await readAttempt(key)
