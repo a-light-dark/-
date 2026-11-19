@@ -8,12 +8,13 @@ const db = cloud.database()
 const _ = db.command
 
 // 删除某个集合里满足条件的所有记录（集合不存在也不报错）
-async function removeWhere(collection, where) {
+async function removeWhere(collection, where, required = false) {
   try {
     const res = await db.collection(collection).where(where).remove()
     return (res.stats && res.stats.removed) || 0
   } catch (err) {
     console.warn('[deleteAccount] remove ' + collection + ' failed', err.errCode, err.errMsg)
+    if (required) throw err
     return 0
   }
 }
@@ -59,6 +60,18 @@ exports.main = async (event, context) => {
   ])).count()
   if (active.total > 0) {
     return { ok: false, msg: '你还有 ' + active.total + ' 个互助订单没结束，处理完再注销' }
+  }
+
+  // 先清理关联记录；部分失败时保留账号，用户可安全重试剩余清理。
+  // audit_logs / security_alerts 属审计记录，按审计留存要求保留，用于合规核查与排障。
+  let deletedFollows, deletedReviews, deletedFeedback
+  try {
+    deletedFollows = await removeWhere('follows', { _openid: OPENID }, true)
+    deletedReviews = await removeWhere('reviews', { fromOpenid: OPENID }, true)
+    deletedReviews += await removeWhere('reviews', { toOpenid: OPENID }, true)
+    deletedFeedback = await removeWhere('feedback', { _openid: OPENID }, true)
+  } catch (err) {
+    return { ok: false, msg: '关联数据暂未清理完，请稍后重试注销' }
   }
 
   // 2. 我发的帖子：连评论 / 点赞 / 收藏 / 通知 / 举报一并删掉
@@ -125,5 +138,5 @@ exports.main = async (event, context) => {
   // 7. 清云存储：自己帖子的图 + 头像（失败不影响注销结果）
   const filesRemoved = await removeFiles(myFiles)
 
-  return { ok: true, deletedPosts: removedPosts, filesRemoved: filesRemoved }
+  return { ok: true, deletedPosts: removedPosts, filesRemoved, deletedFollows, deletedReviews, deletedFeedback }
 }
