@@ -1,5 +1,6 @@
 // cloudfunctions/feedback/index.js —— 建议反馈：提交 / 我的反馈 / 管理员列表 / 标记已处理
 const cloud = require('wx-server-sdk')
+const { checkRate } = require('./lib/limit')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -44,6 +45,9 @@ exports.main = async (event) => {
     if (content.length < 5) return { ok: false, msg: '多写几个字吧（至少 5 个字）' }
     if (content.length > 500) return { ok: false, msg: '最多写 500 字，已经够说清楚了' }
     const contact = String(event.contact || '').trim().slice(0, 50)
+
+    const rate = await checkRate(db.collection('rate_limits'), 'feedback_' + OPENID, 3, 60000)
+    if (!rate.ok) return rate
 
     let me = null
     try {

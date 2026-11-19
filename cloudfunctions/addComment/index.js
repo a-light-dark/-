@@ -1,6 +1,7 @@
 // 云函数：addComment —— 发评论（先做内容安全检测），同时给帖子的评论数 +1
 // 为什么用云函数：评论人不是帖子作者，客户端没权限改帖子上的 commentCount。
 const cloud = require('wx-server-sdk')
+const { checkRate } = require('./lib/limit')
 const { matchWord } = require('./lib/normalize')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -140,6 +141,7 @@ async function checkWords(content) {
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
+  if (!OPENID) return { ok: false, msg: '没有拿到你的身份，请重进小程序' }
   const postId = String(event.postId || '')
   const content = String(event.content || '').trim()
   if (!postId || !content) return { ok: false, msg: '参数不完整' }
@@ -166,6 +168,9 @@ exports.main = async (event) => {
     rootId = parent.parentId ? String(parent.parentId) : String(parent._id || rawParentId)
     replyTo = String(event.replyTo || parent.nickname || '').slice(0, 20)
   }
+
+  const rate = await checkRate(db.collection('rate_limits'), 'comment_' + OPENID, 10, 60000)
+  if (!rate.ok) return rate
 
   // 昵称头像优先用 users 里的最新资料，客户端传的只当兜底
   let nickname = event.nickname || '同学'

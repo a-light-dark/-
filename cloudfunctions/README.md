@@ -35,6 +35,8 @@
 | `adminApi/` | 管理后台网关：仪表盘 / 帖子·评论·举报·反馈·用户管理 / 公告 / 运营配置 / 审计日志 / 回收站 / 敏感词库 / 数据备份（全部动作过管理员白名单 + 写 `audit_logs`；处理举报/反馈后会给当事人发「系统」消息，文案可在运营配置里改） | 管理动作不能由客户端直写；白名单和审计只能放服务端；封禁会改 `users.banned` 并被 5 个写入口校验 |
 | `setupCollections/` | 开发辅助：建 `favorites` / `reports` / `notices` / `feedback` / `follows` / `reviews` / `announcements` / `bans` / `settings` / `audit_logs` 集合，测试用 seed/cleanup | 集合只能建在服务端；`seedPost`/`seedReport`/`seedNotice`/`seedOrder` 造的数据用来模拟「别人发的」；**种子/清理必须带后台 token**（全新环境还没有管理员账号时，只放行「建集合」） |
 
+上线五个限流入口前，先创建内部集合 `rate_limits`，确认新集合的客户端读、写权限均为 false，再部署。初始化清单也已包含此集合。
+
 ## 内容安全（msgSecCheck）怎么用
 
 4 个带检测的函数里都有这段写法：

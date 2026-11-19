@@ -2,6 +2,7 @@
 // 做四件事：① 文字内容安全检测（msgSecCheck）② 图片内容安全检测（imgSecCheck）
 //           ③ 服务端补昵称/头像（不让客户端伪造）④ 写进 posts
 const cloud = require('wx-server-sdk')
+const { checkRate } = require('./lib/limit')
 const { matchWord } = require('./lib/normalize')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -150,6 +151,7 @@ function checkImageGuarded(fileID) {
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
+  if (!OPENID) return { ok: false, msg: '没有拿到你的身份，请重进小程序' }
   const content = String(event.content || '').trim()
   const tags = Array.isArray(event.tags)
     ? event.tags.filter((t) => TOPIC_NAMES.indexOf(t) > -1).slice(0, 5)
@@ -178,6 +180,9 @@ exports.main = async (event) => {
       return { ok: false, msg: '第 ' + (i + 1) + ' 张图片地址不对，重新上传一下' }
     }
   }
+
+  const rate = await checkRate(db.collection('rate_limits'), 'post_' + OPENID, 5, 60000)
+  if (!rate.ok) return rate
 
   // 昵称、头像从 users 读：客户端传什么都不可信
   let nickname = '同学' + String(OPENID).slice(-4)

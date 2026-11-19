@@ -1,6 +1,7 @@
 // 云函数：createOrder —— 发布互助悬赏
 // 内容安全检测 + 金额校验 + 服务端补昵称/头像，再写进 orders
 const cloud = require('wx-server-sdk')
+const { checkRate } = require('./lib/limit')
 const { matchWord } = require('./lib/normalize')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -104,6 +105,7 @@ async function checkWords(content) {
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
+  if (!OPENID) return { ok: false, msg: '没有拿到你的身份，请重进小程序' }
   const content = String(event.content || '').trim()
   const amount = Number(event.amount || 0)
 
@@ -118,6 +120,9 @@ exports.main = async (event) => {
       return { ok: false, msg: '你的账号已被圈主限制，暂时不能发悬赏' }
     }
   } catch (err) { /* 查不到就放行 */ }
+
+  const rate = await checkRate(db.collection('rate_limits'), 'order_' + OPENID, 3, 60000)
+  if (!rate.ok) return rate
 
   let nickname = '同学' + String(OPENID).slice(-4)
   let avatar = '😀'

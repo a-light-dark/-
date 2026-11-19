@@ -10,7 +10,7 @@ const db = cloud.database()
 
 // 1) 建全部集合（已存在就跳过，可重复调用）：换新环境后跑一次即可
 const COLLECTIONS = [
-  'ads','posts', 'comments', 'orders', 'users', 'likes', 'favorites', 'reports', 'notices', 'feedback', 'follows', 'reviews', 'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters', 'backups', 'admin_sessions', 'admin_accounts', 'approvals', 'meta', 'wordlist', 'login_attempts', 'security_alerts', 'search_hot']
+  'ads','posts', 'comments', 'orders', 'users', 'likes', 'favorites', 'reports', 'notices', 'feedback', 'follows', 'reviews', 'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters', 'backups', 'admin_sessions', 'admin_accounts', 'approvals', 'meta', 'wordlist', 'login_attempts', 'security_alerts', 'search_hot', 'rate_limits']
 
 // 这个函数会建集合，也带一批「塞/删测试数据」的开关，不能让普通用户随便调。
 // 规则：带后台 token 的圈主/管理员随时可用；全新环境（还没建出管理员账号）只放行「建集合」，
