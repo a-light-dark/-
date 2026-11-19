@@ -1,6 +1,7 @@
 // 云函数：createOrder —— 发布互助悬赏
 // 内容安全检测 + 金额校验 + 服务端补昵称/头像，再写进 orders
 const cloud = require('wx-server-sdk')
+const { matchWord } = require('./lib/normalize')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -81,7 +82,8 @@ async function checkWords(content) {
   try {
     const list = await loadWords()
     if (!list.length) return { ok: true }
-    const hit = list.find(function (w) { return content.indexOf(String(w.word).trim()) > -1 })
+    const word = matchWord(content, list.map(w => w.word))
+    const hit = word && list.find(w => w.word === word)
     if (hit) {
       // 命中次数给管理台看（失败不影响拦截）
       try {

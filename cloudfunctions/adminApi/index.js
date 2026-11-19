@@ -4,6 +4,7 @@
 // 所有管理动作都会写 audit_logs（谁、什么时候、对什么、做了什么）。
 
 const cloud = require('wx-server-sdk')
+const { normalizeText } = require('./lib/normalize')
 const crypto = require('crypto')
 const { dayStartCN, seriesDays } = require('./lib/time')
 
@@ -550,15 +551,21 @@ async function wordsList() {
 
 async function wordsAdd(word) {
   const w = String(word || '').trim()
-  if (!w) return { ok: false, msg: '词不能为空' }
+  const normalized = normalizeText(w)
+  if (!normalized) return { ok: false, msg: '词不能为空' }
   if (w.length > 20) return { ok: false, msg: '词太长啦，20 字以内' }
+  const words = db.collection('wordfilters')
   try {
-    const countRes = await db.collection('wordfilters').count()
-    if (countRes.total >= 200) return { ok: false, msg: '词库满了（200 个），先删一些再加' }
-    const dup = await db.collection('wordfilters').where({ word: w }).limit(1).get()
-    if (dup.data && dup.data[0]) return { ok: false, msg: '这个词已经在词库里了' }
-    const added = await db.collection('wordfilters').add({
-      data: { word: w, createdAt: db.serverDate() },
+    // 旧词条只有 word。词库最多 200 条，一次读取同时校验数量与新旧词条。
+    const existing = await words.field({ word: true, normalized: true }).limit(200).get()
+    if (existing.data.some(row => (row.normalized || normalizeText(row.word)) === normalized)) {
+      return { ok: false, msg: '这个词已经在词库里了' }
+    }
+    if (existing.data.length >= 200) return { ok: false, msg: '词库满了（200 个），先删一些再加' }
+    // 同时添加两种等价拼写时，唯一文档 ID 保证只会写入一次。
+    const id = crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 32)
+    const added = await words.add({
+      data: { _id: id, word: w, normalized, createdAt: db.serverDate() },
     })
     return { ok: true, id: added._id }
   } catch (err) {

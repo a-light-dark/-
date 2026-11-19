@@ -1,6 +1,7 @@
 // 云函数：addComment —— 发评论（先做内容安全检测），同时给帖子的评论数 +1
 // 为什么用云函数：评论人不是帖子作者，客户端没权限改帖子上的 commentCount。
 const cloud = require('wx-server-sdk')
+const { matchWord } = require('./lib/normalize')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -117,7 +118,8 @@ async function checkWords(content) {
   try {
     const list = await loadWords()
     if (!list.length) return { ok: true }
-    const hit = list.find(function (w) { return content.indexOf(String(w.word).trim()) > -1 })
+    const word = matchWord(content, list.map(w => w.word))
+    const hit = word && list.find(w => w.word === word)
     if (hit) {
       // 命中次数给管理台看（失败不影响拦截）
       try {
