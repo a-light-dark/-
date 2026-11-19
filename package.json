@@ -3,6 +3,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "check": "node tools/check.js"
+    "check": "node tools/check.js",
+    "test": "node --test tests/"
   }
 }

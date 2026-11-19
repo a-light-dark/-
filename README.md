@@ -441,6 +441,8 @@ tcb hosting deploy admin/web/dist                          # 部署 PC 后台静
 
 ## 改完代码先自检
 
+运行 `npm test` 可验证北京时间分桶、屏蔽词归一化和五个写入口的固定窗口限流。GitHub Actions 在 push 和 pull request 时用 Node 20 运行仓库自检与单元测试。
+
 在 `campus-forum` 目录里执行：
 
 ```
