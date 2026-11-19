@@ -99,21 +99,27 @@ async function checkImage(fileID) {
 
 // 敏感词库（圈主在管理台维护）：本地先拦一道
 // 词库只有一份汇总文档：每次读 1 次即可（以前是扫 200 条），加词立刻生效
+// 词库读取：优先汇总文档（1 次读），但汇总文档为空时回退到明细表
+// （曾经出现过 wordlist/main 存在但 words 为空，导致屏蔽词整体失效）
+async function loadWordfilters() {
+  try {
+    const r2 = await db.collection('wordfilters').limit(200).get()
+    return (r2.data || [])
+      .map(function (w) { return { id: w._id, word: w.word } })
+      .filter(function (w) { return w && String(w.word || '').trim() })
+  } catch (e2) {
+    return []
+  }
+}
+
 async function loadWords() {
   try {
     const r = await db.collection('wordlist').doc('main').get()
     const list = ((r.data && r.data.words) || []).filter(function (w) { return w && String(w.word || '').trim() })
-    return list
+    if (list.length) return list
+    return await loadWordfilters()
   } catch (err) {
-    try {
-      const r2 = await db.collection('wordfilters').limit(200).get()
-      const list = (r2.data || [])
-        .map(function (w) { return { id: w._id, word: w.word } })
-        .filter(function (w) { return w && String(w.word || '').trim() })
-      return list
-    } catch (e2) {
-      return []
-    }
+    return await loadWordfilters()
   }
 }
 

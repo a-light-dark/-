@@ -91,7 +91,7 @@ tcb fn invoke maintain --params '{"action":"migrate","collections":["posts","com
 3. **`count()` 不要每屏都刷**：工作台已经加了 30 秒缓存（`dashboard`），红点用 `notices` 的 `unread`，别在首页反复 `count`。
 4. **列表页一次拿全**：详情页从 3 次调用合并成 `postDetail` 一次；榜单从客户端 400 次文档读改成 `board` 一次（服务端 60 秒缓存）。
 5. **配置类读取加版本号**：`meta.versions` + `siteData.homeMeta`，版本没变就只读 1 次。
-6. **敏感词不要每次拉 200 条**：读 `wordlist/main` 单文档。
+6. **敏感词不要每次拉 200 条**：读 `wordlist/main` 单文档。注意汇总文档为空时会回退到 `wordfilters` 明细表（2026-11-19 踩过：`wordlist/main` 存在但 `words: []`，导致屏蔽词整体失效、连精确词都放行；现在两个文件都有兜底，后台词库为空时也会弹提示）。
 
 ## 5. 这轮实测的数字
 

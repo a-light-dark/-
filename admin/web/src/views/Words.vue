@@ -14,6 +14,16 @@
       </div>
     </div>
 
+    <el-alert
+      v-if="!loading && total === 0"
+      type="warning"
+      show-icon
+      :closable="false"
+      title="词库是空的，现在屏蔽词不起作用"
+      description="往里加几个词（代开发票、包过、刷单…）后立刻生效；这条提示只在词库为空时出现。"
+      style="margin-bottom: 14px"
+    />
+
     <div class="card">
       <el-table :data="list" v-loading="loading" size="large" empty-text="词库是空的，遇到违规内容可以在这里加词">
         <el-table-column label="词" min-width="200">
