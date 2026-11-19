@@ -25,6 +25,10 @@
 | `backups` | 数据库备份（JSON 存云存储） | 不可读写 |
 | `admin_accounts` / `admin_sessions` | 后台账号 / 登录会话 | 不可读写 |
 | `approvals` | 开发者改动待审单 | 不可读写 |
+| `rate_limits` | 写操作限流计数（发帖/评论/悬赏/举报/反馈） | 不可读写（`ADMINONLY`；新建集合默认是 PRIVATE，必须手动改） |
+| `security_alerts` | 内容安全接口失败告警（msgSecCheck / imgSecCheck 放行记录） | 不可读写 |
+| `search_hot` | 搜索热词计数 | 不可读写 |
+| `meta` | 版本号文档（content / ads / config） | 不可读写 |
 | `login_attempts` | 登录失败次数（限流） | 不可读写 |
 | `rate_limits` | 按操作和用户计数。主键为操作前缀与 openid，`count` 为次数，`windowStart` 为窗口起点（Date） | 所有客户端不可读写，仅云函数访问 |
 | `security_alerts` | 内容安全接口失败告警 | 不可读写 |

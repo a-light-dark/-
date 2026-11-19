@@ -4,9 +4,23 @@
 // 3) removePostId：删掉这条帖子，并把它的评论/点赞/收藏/举报一起清掉（测试收尾用）
 // 4) seedNotice / removeNoticeId：塞一条「别人发来的」消息 / 删掉它（测试消息通知用）
 const cloud = require('wx-server-sdk')
+const crypto = require('crypto')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+
+// 新环境默认词库：没有这些词时，发帖/评论的屏蔽词等于没开
+const DEFAULT_WORDS = ['代开发票', '包过', '刷单', '加微信', '贷款', '博彩']
+
+// 与 adminApi/createPost 的 normalizeText 保持一致（全角转半角 + 去空白/零宽 + 小写）
+function normalizeText(input) {
+  return String(input || '')
+    .replace(/[\uFF01-\uFF5E]/g, function (ch) {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xfee0)
+    })
+    .replace(/[\s\u3000\u200B-\u200F\uFEFF]/g, '')
+    .toLowerCase()
+}
 
 // 1) 建全部集合（已存在就跳过，可重复调用）：换新环境后跑一次即可
 const COLLECTIONS = [
@@ -87,15 +101,46 @@ exports.main = async (event) => {
     } catch (e) {
       wl = null
     }
-    if (!wl) {
+
+    async function readWordfilters() {
       const ws = await db.collection('wordfilters').limit(200).get().catch(function () { return { data: [] } })
-      const words = (ws.data || [])
+      return (ws.data || [])
         .map(function (w) { return { id: w._id, word: String(w.word || '') } })
         .filter(function (w) { return w.word })
+    }
+
+    let words = (wl && wl.words) || []
+    let seeded = 0
+    if (!words.length) {
+      words = await readWordfilters()
+      // 明细表也空 → 灌入默认词，避免「词库为空导致屏蔽词整体失效」
+      if (!words.length) {
+        for (let i = 0; i < DEFAULT_WORDS.length; i++) {
+          const w = DEFAULT_WORDS[i]
+          const normalized = normalizeText(w)
+          try {
+            await db.collection('wordfilters').add({
+              data: {
+                _id: crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 32),
+                word: w,
+                normalized: normalized,
+                createdAt: db.serverDate(),
+              },
+            })
+            seeded++
+          } catch (err) {
+            // 已存在（重复 _id）就跳过
+          }
+        }
+        words = await readWordfilters()
+      }
+    }
+
+    if (!wl || seeded > 0) {
       await db.collection('wordlist').doc('main').set({ data: { words: words, updatedAt: db.serverDate() } })
-      result.wordlist = 'created:' + words.length
+      result.wordlist = (wl ? 'refreshed:' : 'created:') + words.length + (seeded ? ' (seeded ' + seeded + ')' : '')
     } else {
-      result.wordlist = 'exists:' + ((wl.words || []).length)
+      result.wordlist = 'exists:' + words.length
     }
   } catch (err) {
     result.wordlist = 'error'
