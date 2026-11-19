@@ -5,6 +5,7 @@
 
 const cloud = require('wx-server-sdk')
 const crypto = require('crypto')
+const { dayStartCN, seriesDays } = require('./lib/time')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -180,18 +181,24 @@ async function dashboard(event) {
   // 工作台一次要算 10 个计数（还要 join 举报对应的帖子）。
   // 后台经常来回切页面，30 秒内直接复用结果，少打十几次数据库。
   const force = !!(event && event.force)
-  if (!force && dashCache.data && Date.now() - dashCache.at < DASH_CACHE_MS) {
-    return dashCache.data
+  const now = Date.now()
+  const today = { createdAt: _.gte(new Date(dayStartCN(now))) }
+  const counts = () => Promise.all([
+    db.collection('posts').where(today).count(),
+    db.collection('comments').where(today).count(),
+  ])
+  if (!force && dashCache.data && now - dashCache.at < DASH_CACHE_MS) {
+    const [posts, comments] = await counts()
+    return { ...dashCache.data, data: { ...dashCache.data.data, todayPosts: posts.total, todayComments: comments.total } }
   }
-  const [posts, comments, orders, users, reportsCount, feedbackPending, todayPosts, todayComments] = await Promise.all([
+  const [posts, comments, orders, users, reportsCount, feedbackPending, [todayPosts, todayComments]] = await Promise.all([
     db.collection('posts').count(),
     db.collection('comments').count(),
     db.collection('orders').count(),
     db.collection('users').count(),
     db.collection('reports').count(),
     db.collection('feedback').where({ status: '待处理' }).count(),
-    db.collection('posts').where({ createdAt: _.gte(new Date(new Date().setHours(0, 0, 0, 0))) }).count(),
-    db.collection('comments').where({ createdAt: _.gte(new Date(new Date().setHours(0, 0, 0, 0))) }).count(),
+    counts(),
   ])
   let trashCount = 0
   try {
@@ -1370,12 +1377,6 @@ async function approvalReject(id, reason) {
 }
 
 // ============ 流量看板（内容与互动数据） ============
-function dayStart(d) {
-  const x = new Date(d)
-  x.setHours(0, 0, 0, 0)
-  return x.getTime()
-}
-
 async function grabRecent(col, limit) {
   try {
     const r = await db.collection(col).orderBy('createdAt', 'desc').limit(limit).get()
@@ -1386,10 +1387,10 @@ async function grabRecent(col, limit) {
 }
 
 async function analyticsOverview(event) {
-  const days = Math.min(30, Math.max(7, Number(event.days) || 7))
+  const days = Math.min(30, Math.max(7, Math.floor(Number(event.days)) || 7))
   const now = Date.now()
-  const today0 = dayStart(now)
-  const from = today0 - (days - 1) * 86400000
+  const periods = seriesDays(now, days)
+  const from = periods[0].from
   const packs = await Promise.all([
     grabRecent('posts', 1000),
     grabRecent('comments', 1000),
@@ -1402,11 +1403,8 @@ async function analyticsOverview(event) {
   const users = packs[2]
   const likes = packs[3]
   const orders = packs[4]
-  const series = []
-  for (let i = 0; i < days; i++) {
-    const start = from + i * 86400000
-    const end = start + 86400000
-    const bucket = { day: new Date(start).toISOString().slice(5, 10), posts: 0, comments: 0, users: 0 }
+  const series = periods.map(({ key, from: start, to: end }) => {
+    const bucket = { key, day: key.slice(5), posts: 0, comments: 0, users: 0 }
     posts.forEach(function (p) {
       const t = ts(p.createdAt)
       if (t >= start && t < end) bucket.posts++
@@ -1419,13 +1417,10 @@ async function analyticsOverview(event) {
       const t = ts(u.createdAt)
       if (t >= start && t < end) bucket.users++
     })
-    series.push(bucket)
-  }
-  const today = {
-    posts: posts.filter(function (p) { return ts(p.createdAt) >= today0 }).length,
-    comments: comments.filter(function (c) { return ts(c.createdAt) >= today0 }).length,
-    users: users.filter(function (u) { return ts(u.createdAt) >= today0 }).length,
-  }
+    return bucket
+  })
+  const last = series[series.length - 1]
+  const today = { posts: last.posts, comments: last.comments, users: last.users }
   let totalViews = 0
   posts.forEach(function (p) { totalViews += Number(p.views || 0) })
   const active = {}
@@ -1645,7 +1640,7 @@ exports.main = async (event) => {
     let res
     switch (action) {
       case 'dashboard':
-        res = await dashboard()
+        res = await dashboard(event)
         break
       case 'posts.list':
         res = await postsList(event)
