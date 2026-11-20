@@ -30,10 +30,6 @@
 | `search_hot` | 搜索热词计数 | 不可读写 |
 | `meta` | 版本号文档（content / ads / config） | 不可读写 |
 | `login_attempts` | 登录失败次数（限流） | 不可读写 |
-| `rate_limits` | 按操作和用户计数。主键为操作前缀与 openid，`count` 为次数，`windowStart` 为窗口起点（Date） | 所有客户端不可读写，仅云函数访问 |
-| `security_alerts` | 内容安全接口失败告警 | 不可读写 |
-| `search_hot` | 热搜词计数 | 不可读写 |
-| `meta` | 全局版本号 `versions {content, ads, config}` | 不可读写 |
 
 举报的 `targetType` 为 `post` 或 `comment`；历史记录缺省为帖子。评论举报同时记录 `commentId` 和所属 `postId`。自动备份的 `source` 为 `auto`，主键为 `daily-YYYY-MM-DD`；手动备份及历史无来源的记录保留。`meta/dailyBackupPathKey` 仅服务端可读，用于生成不可按日期猜测的对象名。部署时核对云存储 `backups/` 目录权限，限制为服务端读写，管理端沿用已鉴权的临时下载链接。
 

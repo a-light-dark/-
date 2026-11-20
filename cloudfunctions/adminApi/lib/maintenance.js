@@ -132,7 +132,26 @@ async function runDaily(db, cloud, now = Date.now()) {
   const expired = await removeExpired(db.collection('admin_sessions').where({ expiresAt: db.command.lte(now) }))
   const backup = await saveBackup(db, cloud, dayKeyCN(now), now)
   const pruned = await pruneBackups(db, cloud)
-  const trash = await removeExpired(db.collection('trash').where({ deletedAt: db.command.lte(new Date(now - 30 * DAY_MS)) }))
+  // 回收站的 deletedAt 有两种历史写法：Date（后台删除）和 ISO 字符串（早期脚本/旧版本）。
+  // 云数据库按类型严格比较，所以要分别查一次，不能只查 Date。
+  const cutoff = now - 30 * DAY_MS
+  let trash = 0
+  try {
+    trash += await removeExpired(db.collection('trash').where({ deletedAt: db.command.lte(new Date(cutoff)) }))
+  } catch (err) {
+    console.warn('清理回收站（Date）失败', err && err.errCode)
+  }
+  try {
+    trash += await removeExpired(db.collection('trash').where({ deletedAt: db.command.lte(new Date(cutoff).toISOString()) }))
+  } catch (err) {
+    console.warn('清理回收站（字符串）失败', err && err.errCode)
+  }
+  // 还有极少数早期脚本写成了毫秒数字，一并兼容
+  try {
+    trash += await removeExpired(db.collection('trash').where({ deletedAt: db.command.lte(cutoff) }))
+  } catch (err) {
+    console.warn('清理回收站（数字）失败', err && err.errCode)
+  }
   return { ok: true, backupId: backup.id, backupsRemoved: pruned, trashRemoved: trash,
     sessionsRemoved: expired }
 }

@@ -22,7 +22,7 @@
 | `board/` | 本周榜单：热帖 Top5 + 活跃同学 Top5（最近 7 天，服务端算完只回 10 条，60 秒缓存） | 以前是客户端拉 100 条帖子 + 200 条评论在本地算，一次进榜 400+ 次文档读、两个请求 |
 | `maintain/` | 数据库维护：`action:'scan'` 抽样看各集合时间字段类型；`action:'migrate'` 把 ISO 字符串时间批量转成 `Date`（默认 dryRun） | 字符串时间会让 `createdAt >= 今天` 这类范围查询一条都查不到，得在服务端批量修；**只认后台登录 token**（`admin_sessions` 里角色为圈主/管理员），不带 token 返回 `NEED_ADMIN` |
 | `deleteAccount/` | 注销账号：删自己的资料与全部内容 | 要跨集合批量删数据、改别人的帖子计数；有未完成订单时先拦下 |
-| `reportPost/` | 举报帖子（写 `reports` 集合） | 举报记录不能由客户端直接写；理由白名单 + 防重复举报 |
+| `reportPost/` | 举报帖子或评论（写 `reports` 集合） | 带 `commentId` 时按评论举报记录（`targetType: comment` + 所属 `postId`），否则是帖子举报；理由白名单 + 防重复举报 |
 | `notices/` | 消息通知：列表 / 未读数 / 单条已读 / 一键已读（类型 comment/like/order/**system**，system 是圈主处理举报/反馈后的结果通知） | 通知文档的 `_openid` 是发送者，收件人读不到，只能按 `toOpenid` 由服务端查 |
 | `adminApi/` 的 `accounts.sessions` / `accounts.revoke` | 在线设备：列出未过期的后台登录会话（账号/身份/登录时间/到期时间），`revoke` 按会话 id 强制下线（删 `admin_sessions`，对方 token 最多 15 秒后失效） | 只有圈主能看/能踢；token 缓存 15 秒是「踢了能立刻生效」的关键 |
 | `adminApi/` 的 `backup.restore` | 从云存储的备份 JSON 恢复：`{id, dryRun, from, limit, concurrency}`，每批 ≤200 条（默认 50、并发 10），返回 `{done, written, next, progress, collections}` | 云函数单次只跑 3 秒，一次写几百条会超时，所以必须在网页端循环分批调用 |

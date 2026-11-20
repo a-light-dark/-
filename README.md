@@ -95,7 +95,7 @@ campus-forum/
 ## 云开发配置（当前环境）
 
 - 环境 ID：`cloud1-d6g26wz61eca836b8`（已写进 `miniprogram/app.js` 的 `CLOUD_ENV`）
-- 云开发控制台 → 数据库 → 需要 24 个集合，读写权限按下面的表格来（`posts` / `users` / `comments` / `likes` / `orders` 用**自定义安全规则** `{"read": true, "write": false}` 只开放读；微信预设里的「所有用户可读」其实还带着创建者可写，别用）：
+- 云开发控制台 → 数据库 → 需要 28 个集合，读写权限按下面的表格来（`posts` / `users` / `comments` / `likes` / `orders` 用**自定义安全规则** `{"read": true, "write": false}` 只开放读；微信预设里的「所有用户可读」其实还带着创建者可写，别用）：
 
 | 集合 | 存什么 | 权限 |
 |---|---|---|
@@ -384,7 +384,7 @@ UGC 小程序必须过内容安全审核，否则正式上线会被打回。现�
 
 - **流量看板**（Web 后台 / 小程序管理台同数据）：近 7/14/30 天新增帖子、评论、同学柱状图；帖子总数 / 浏览总量 / 点赞 / 互助单 / 活跃同学（7 天内发过帖或评论）；浏览最多、点赞最多 Top5；话题分布。数据来自 `adminApi` 的 `analytics.overview`（扫最近 1000 条聚合，不额外花钱）。
 - **真实 UV/PV 不在云开发里**：微信小程序后台 → 统计 → 访问分析，才有启动次数、访问人数、留存；本页是「内容与互动流量」。
-- **广告位**：集合 `ads`（24 个集合之一），字段 `title/image/position/linkType/linkValue/weight/enabled/startAt/endAt/views/clicks`。位置 `home_banner`（首页 banner，已接入小程序首页）和 `detail_bottom`（详情页底部，已接入帖子详情页，0.6.18）。管理台「广告管理」负责增删改、开关、看曝光/点击/点击率。
+- **广告位**：集合 `ads`（28 个集合之一），字段 `title/image/position/linkType/linkValue/weight/enabled/startAt/endAt/views/clicks`。位置 `home_banner`（首页 banner，已接入小程序首页）和 `detail_bottom`（详情页底部，已接入帖子详情页，0.6.18）。管理台「广告管理」负责增删改、开关、看曝光/点击/点击率。
 - **广告下发接口**：`siteData`（公开云函数）返回 `ads` 数组，只给 `enabled=true` 且在投放时间窗内、按 `weight` 倒序；小程序端 `api.fetchSiteData()` 拿到的 `ads` 已把云存储 fileID 换成临时 https 链接。
 - **曝光/点击上报**：`siteData` 的 `adReport` 动作（`{action:'adReport', id, type:'view|click'}`），小程序端 `api.reportAd(id, type)` 封装；首页加载时曝光一次、点广告时点击一次。
 - **屏蔽词命中**：`wordfilters` 每个词多了 `hits`/`lastHitAt`；`createPost`/`addComment`/`createOrder` 命中时自动 `inc(1)`。Web 敏感词库支持「批量导入（一行一个/逗号分隔，单次 ≤100）」「复制全部」「按命中次数排序」，能直接看出哪类内容最常被拦。
@@ -417,7 +417,7 @@ tcb hosting deploy admin/web/dist                          # 部署 PC 后台静
 
 长按别人的评论或楼中楼回复可举报。管理端按目标区分帖子与评论，删除被举报评论时归档该评论，保留主帖及其他回复。历史帖子举报继续按帖子处理。
 
-每日维护使用 `adminApi/config.json` 中的 `campusDailyMaintenance` 定时器（每日 03:00）。以北京时间日期登记自动备份，保留最近 7 份成功的自动备份，手动备份独立保留。会话按过期时间清理；当天备份完成后，清理已移入回收站满 30 天的记录。
+每日维护使用 `adminApi/config.json` 中的 `campusDailyMaintenance` 定时器（每日 03:00，已在控制台绑定触发器）。想立刻跑一次不用等到凌晨：圈主登录后台后调 `adminApi` 的 `maintenance.run`（会给当天写一份自动备份、清理 30 天前的回收站、过期登录会话，并只保留最近 7 份自动备份）。以北京时间日期登记自动备份，保留最近 7 份成功的自动备份，手动备份独立保留。会话按过期时间清理；当天备份完成后，清理已移入回收站满 30 天的记录。
 
 发布时更新 `reportPost`、`adminReview`、`adminApi`、小程序和 Web 后台。在微信开发者工具对 `adminApi` 执行「上传触发器」，在云控制台核对触发时间和函数超时（120 秒）。验收时查看定时调用日志和备份列表。详见[云开发定时触发器说明](https://docs.cloudbase.net/cloud-function/timer-trigger)。
 
@@ -664,7 +664,7 @@ $env:VITE_MOCK='true'; npm run dev   # Windows PowerShell
 2. `npm run build`，把 `dist/` 上传到 云开发 → 静态网站托管
 3. 打开控制台给的网址，账号 `admin` / 密码 `campus2026`，登录后到「运营配置 → 修改登录密码」改掉
 
-> 云函数 22 个（多了 `adminLogin`、`adminApi`），集合 24 个（含 `admin_sessions`、`admin_accounts`、`approvals`、`meta`、`wordlist`、`ads`、`backups`）。
+> 云函数 25 个（含 `adminLogin`、`adminApi`、`board`、`maintain`、`search`、`postDetail`），集合 28 个（含 `admin_sessions`、`admin_accounts`、`approvals`、`meta`、`wordlist`、`ads`、`backups`、`rate_limits`、`security_alerts`、`search_hot`、`login_attempts`）。
 
 
 ### 管理后台的身份与权限（RBAC）

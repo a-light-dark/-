@@ -108,7 +108,7 @@ const MUTATIONS = [
   'announcements.create', 'announcements.update', 'announcements.remove', 'settings.set',
   'trash.restore', 'trash.purge', 'wordfilters.add', 'wordfilters.remove',
   'ads.save', 'ads.remove', 'ads.toggle',
-  'backup.create', 'backup.remove', 'backup.restore',
+  'backup.create', 'backup.remove', 'backup.restore', 'maintenance.run',
   'accounts.create', 'accounts.setRole', 'accounts.setPassword', 'accounts.setActive', 'accounts.remove',
   'approvals.approve', 'approvals.reject',
 ]
@@ -123,6 +123,8 @@ function allowRole(role, action) {
   if (action.indexOf('accounts.') === 0) return role === 'owner'
   // 从备份恢复会覆盖线上数据，只给圈主/管理员；开发者要恢复得先发审核单
   if (action === 'backup.restore') return role === 'owner' || role === 'admin'
+  // 每日维护（备份 + 清理）只给圈主手动触发
+  if (action === 'maintenance.run') return role === 'owner'
   // 审核列表开发者可以看（只看自己提交的），通过/驳回只有圈主/管理员能做
   if (action === 'approvals.list') return role === 'owner' || role === 'admin' || role === 'developer'
   if (action.indexOf('approvals.') === 0) return role === 'owner' || role === 'admin'
@@ -1774,6 +1776,10 @@ exports.main = async (event) => {
         break
       case 'security.list':
         res = await securityList(event)
+        break
+      case 'maintenance.run':
+        res = await runDaily(db, cloud)
+        if (res.ok) await audit('maintenance.run', 'maintenance', 'daily', JSON.stringify(res))
         break
       case 'backup.create':
         res = await backupCreate()
