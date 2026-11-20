@@ -12,6 +12,9 @@
 
     <div class="card">
       <el-table :data="list" v-loading="loading" size="large" empty-text="还没有备份">
+        <el-table-column label="来源" width="100">
+          <template #default="{ row }">{{ row.source === 'auto' ? '自动备份' : '手动备份' }}</template>
+        </el-table-column>
         <el-table-column label="备份时间" width="200">
           <template #default="{ row }">{{ time(row.createdAt) }}</template>
         </el-table-column>

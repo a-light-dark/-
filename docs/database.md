@@ -35,6 +35,8 @@
 | `search_hot` | 热搜词计数 | 不可读写 |
 | `meta` | 全局版本号 `versions {content, ads, config}` | 不可读写 |
 
+举报的 `targetType` 为 `post` 或 `comment`；历史记录缺省为帖子。评论举报同时记录 `commentId` 和所属 `postId`。自动备份的 `source` 为 `auto`，主键为 `daily-YYYY-MM-DD`；手动备份及历史无来源的记录保留。`meta/dailyBackupPathKey` 仅服务端可读，用于生成不可按日期猜测的对象名。部署时核对云存储 `backups/` 目录权限，限制为服务端读写，管理端沿用已鉴权的临时下载链接。
+
 安全规则的总原则：**客户端只能读（而且只读公开内容），所有写操作都在云函数里做**。`posts/comments/users/orders` 等用自定义规则 `{"read": true, "write": false}`；`notices/reports/feedback/...` 用 `{"read": false, "write": false}`。
 
 ## 2. 索引：现在有什么、还缺什么
@@ -130,5 +132,5 @@ tcb api tcb ModifySafeRule --body '{"EnvId":"cloud1-d6g26wz61eca836b8","Collecti
 
 - **评论只加载前 100 条**：`postDetail` 现在一次给 100 条，超长楼中楼还没有「加载更多」。
 - **搜索是正则全表扫**：`content` 上的模糊匹配用不到索引，数据上万后建议换成「分词 + 关键词字段」或外部搜索。
-- **`audit_logs` / `backups` 没有自动清理**：现在量小，建议以后加「保留最近 N 条」的定时清理。
+- `audit_logs` 的留存周期待确定。自动备份已按最近 7 份成功记录轮换。
 - **后台列表的 `count()` 仍每次执行**：帖子/举报/反馈列表都带 `count`，可以后续改成「估算 + 上拉加载」。

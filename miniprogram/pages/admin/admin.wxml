@@ -24,22 +24,22 @@
 
     <view class="report-card" wx:for="{{reports}}" wx:key="id">
       <view class="report-head">
-        <view class="reason">{{item.reason}}</view>
+        <view class="reason">{{item.targetType === 'comment' ? '评论' : '帖子'}} · {{item.reason}}</view>
         <view class="report-time">{{item.time}}</view>
       </view>
 
       <!-- 被举报的帖子 -->
-      <view class="post" wx:if="{{item.post}}" bindtap="goDetail" data-postid="{{item.postId}}">
+      <view class="post" wx:if="{{item.target}}" bindtap="goDetail" data-postid="{{item.postId}}">
         <view class="post-user">
-          <image wx:if="{{item.post.avatarIsImage}}" class="avatar" src="{{item.post.avatar}}" mode="aspectFill" />
-          <view wx:else class="avatar">{{item.post.avatar}}</view>
-          <view class="post-name">{{item.post.nickname}}</view>
-          <view class="post-time">{{item.post.time}}</view>
+          <image wx:if="{{item.target.avatarIsImage}}" class="avatar" src="{{item.target.avatar}}" mode="aspectFill" />
+          <view wx:else class="avatar">{{item.target.avatar}}</view>
+          <view class="post-name">{{item.target.nickname}}</view>
+          <view class="post-time">{{item.target.time}}</view>
         </view>
-        <view class="post-content">{{item.post.content}}</view>
-        <view class="post-images" wx:if="{{item.post.images.length}}">
+        <view class="post-content">{{item.target.content}}</view>
+        <view class="post-images" wx:if="{{item.target.images.length}}">
           <image
-            wx:for="{{item.post.images}}"
+            wx:for="{{item.target.images}}"
             wx:for-item="pic"
             wx:key="*this"
             class="post-image"
@@ -50,11 +50,11 @@
       </view>
 
       <!-- 帖子已经被作者删了 -->
-      <view class="post gone" wx:else>这条帖子已经被删除了</view>
+      <view class="post gone" wx:else>被举报的内容已删除</view>
 
       <view class="report-actions">
         <view class="btn ghost" bindtap="onDismiss" data-id="{{item.id}}">忽略</view>
-        <view class="btn danger" wx:if="{{item.post}}" bindtap="onDeleteReport" data-id="{{item.id}}" data-postid="{{item.postId}}">删除帖子</view>
+        <view class="btn danger" wx:if="{{item.target}}" bindtap="onDeleteReport" data-id="{{item.id}}" data-postid="{{item.postId}}">{{item.targetType === 'comment' ? '删除评论' : '删除帖子'}}</view>
       </view>
     </view>
   </block>

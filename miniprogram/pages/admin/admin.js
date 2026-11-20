@@ -58,8 +58,8 @@ Page({
     }
 
     return app.ready()
-      .then(() => api.fetchIsAdmin())
-      .then((isAdmin) => {
+      .then(() => api.adminWhoAmI())
+      .then(({ admin: isAdmin }) => {
         this.setData({ checked: true, isAdmin: isAdmin })
         if (!isAdmin) return []
         return api.adminReportsList(1).then((res) => this.setData({ reports: res.list || [], total: res.total || 0, hasMore: res.hasMore === true, page: 1 }))
@@ -75,22 +75,25 @@ Page({
   onDeleteReport(e) {
     const postId = e.currentTarget.dataset.postid
     const reportId = e.currentTarget.dataset.id
-    if (!postId) return
+    const row = this.data.reports.find(r => r.id === reportId)
+    if (!row) return
+    const comment = row.targetType === 'comment'
+    const label = comment ? '评论' : '帖子'
 
     wx.showModal({
-      title: '删除这条帖子？',
-      content: '帖子会进回收站（管理台 → 回收站 可以恢复）。',
+      title: '删除这条' + label + '？',
+      content: comment ? '这条评论将移入回收站。原帖和其他回复会保留。' : '帖子将移入回收站。',
       confirmText: '删除',
       confirmColor: '#e64340',
       success: (res) => {
         if (!res.confirm) return
         wx.showLoading({ title: '删除中', mask: true })
-        api.adminReportRemovePost(postId)
-          .then(() => {
+        const removal = comment ? api.adminReportRemoveComment(reportId) : api.adminReportRemovePost(postId)
+        removal
+          .then((result) => {
             wx.hideLoading()
-            wx.showToast({ title: '已删除', icon: 'success' })
-            // 这条帖子的所有举报都没了
-            this.setData({ reports: this.data.reports.filter((r) => r.postId !== postId) })
+            wx.showToast({ title: result.pending ? '已提交审核' : '已删除', icon: 'success' })
+            this.load()
             getApp().globalData.postsDirty = true
           })
           .catch((err) => {
@@ -108,7 +111,7 @@ Page({
 
     wx.showModal({
       title: '忽略这条举报？',
-      content: '帖子会保留，这条举报记录删除。',
+      content: '被举报的内容会保留。',
       confirmText: '忽略',
       success: (res) => {
         if (!res.confirm) return

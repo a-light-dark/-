@@ -11,7 +11,7 @@ Page({
     isOwner: false,
     dash: null,
     navs: [
-      { key: 'reports', icon: '🚨', name: '举报处理', desc: '被举报的帖子：删帖或忽略', url: '/pages/admin/admin' },
+      { key: 'reports', icon: '🚨', name: '举报处理', desc: '处理帖子与评论举报', url: '/pages/admin/admin' },
       { key: 'feedback', icon: '📮', name: '反馈管理', desc: '用户的建议和投诉', url: '/pages/feedback-admin/feedback-admin' },
       { key: 'users', icon: '👥', name: '用户管理', desc: '封禁 / 解封 / 设管理员', url: '/pages/admin-users/admin-users' },
       { key: 'posts', icon: '📄', name: '帖子管理', desc: '置顶 / 删除任意帖子', url: '/pages/admin-posts/admin-posts' },

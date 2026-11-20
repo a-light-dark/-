@@ -1,6 +1,7 @@
 // 云函数：reportPost —— 举报帖子
 // 为什么用云函数：举报记录要写进 reports 集合（客户端没有写他人数据的权限），
 // 顺便做理由白名单和「同一个人重复举报不重复记」。
+const crypto = require('crypto')
 const cloud = require('wx-server-sdk')
 const { checkRate } = require('./lib/limit')
 
@@ -19,26 +20,36 @@ exports.main = async (event) => {
   if (!postId) return { ok: false, msg: '缺少帖子 id' }
   if (REASONS.indexOf(reason) === -1) return { ok: false, msg: '举报理由不对' }
 
-  // 自己举报自己没意义，直接拦掉
-  const post = await db.collection('posts').doc(postId).get().catch(function () { return null })
-  if (!post || !post.data) return { ok: false, msg: '帖子不存在或已删除' }
-  if (post.data._openid === OPENID) return { ok: false, msg: '不能举报自己的帖子' }
+  const commentId = String(event.commentId || '')
+  const isComment = Boolean(commentId)
+  const type = isComment ? 'comment' : 'post'
+  const label = isComment ? '评论' : '帖子'
+  const targetId = commentId || postId
+  const targets = db.collection(isComment ? 'comments' : 'posts')
+  const target = (await targets.where({ _id: targetId }).limit(1).get()).data[0]
+  if (!target || (isComment && target.postId !== postId)) {
+    return { ok: false, msg: label + '不存在或已删除' }
+  }
+  if (target._openid === OPENID) return { ok: false, msg: '不能举报自己的' + label }
 
-  // 同一个人对同一条帖子只记一条
-  const exist = await db.collection('reports').where({ postId, _openid: OPENID }).limit(1).get()
-  if ((exist.data || []).length) return { ok: true, duplicate: true }
+  const reports = db.collection('reports')
+  const match = { _openid: OPENID, postId }
+  if (isComment) match.commentId = commentId
+  else match.targetType = db.command.neq('comment') // 兼容没有类型字段的历史举报
+  const exists = async () => (await reports.where(match).limit(1).get()).data.length > 0
+  if (await exists()) return { ok: true, duplicate: true }
 
   const rate = await checkRate(db.collection('rate_limits'), 'report_' + OPENID, 5, 60000)
   if (!rate.ok) return rate
 
-  await db.collection('reports').add({
-    data: {
-      postId: postId,
-      reason: reason,
-      createdAt: db.serverDate(),
-      _openid: OPENID,
-    },
-  })
-
+  const id = crypto.createHash('sha256').update(JSON.stringify([OPENID, type, targetId])).digest('hex').slice(0, 32)
+  try {
+    await reports.add({ data: {
+      _id: id, _openid: OPENID, targetType: type, postId, commentId, reason, createdAt: db.serverDate(),
+    } })
+  } catch (err) {
+    if (await exists()) return { ok: true, duplicate: true }
+    throw err
+  }
   return { ok: true }
 }

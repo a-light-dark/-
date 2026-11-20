@@ -28,6 +28,12 @@ const REPORTS = Array.from({ length: 26 }, (_, i) => ({
   },
 }))
 
+// 预览同一张举报列表中的帖子和评论。
+REPORTS[1] = {
+  ...REPORTS[1], targetType: 'comment', commentId: 'comment_1', post: null,
+  target: { content: '需要处理的评论示例', nickname: '同学2001', images: [] },
+}
+
 const USERS = Array.from({ length: 16 }, (_, i) => ({
   openid: 'oO3Q4x' + (1000 + i) + 'LjdjHG-yb77GFRSkzTWs' + (i % 10),
   nickname: '同学' + (3000 + i),
@@ -247,6 +253,12 @@ export function mockCall(name, data) {
   }
 
   if (action === 'reports.list') return page(REPORTS, d.page, d.pageSize)
+  if (action === 'reports.removeComment') {
+    const index = REPORTS.findIndex(r => r.id === d.id && r.targetType === 'comment')
+    if (index < 0) return { ok: false, msg: '评论举报不存在或已处理' }
+    REPORTS.splice(index, 1)
+    return { ok: true }
+  }
   if (action === 'posts.list') {
     const kw = String(d.keyword || '').trim()
     const list = kw ? POSTS.filter((p) => p.content.indexOf(kw) > -1) : POSTS

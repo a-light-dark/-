@@ -2,5 +2,8 @@
   "permissions": {
     "openapi": ["security.imgSecCheck"]
   },
-  "timeout": 20
+  "timeout": 120,
+  "triggers": [
+    { "name": "campusDailyMaintenance", "type": "timer", "config": "0 0 3 * * * *" }
+  ]
 }

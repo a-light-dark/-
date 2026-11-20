@@ -19,7 +19,7 @@ function isAdmin(openid) {
 
 // 读举报列表：顺带把被举报的帖子一起读出来，前端不用再查一次
 async function listReports() {
-  const res = await db.collection('reports').orderBy('createdAt', 'desc').limit(50).get()
+  const res = await db.collection('reports').where({ targetType: _.neq('comment') }).orderBy('createdAt', 'desc').limit(50).get()
   const reports = res.data || []
   const postIds = reports.map((r) => r.postId).filter(Boolean)
 

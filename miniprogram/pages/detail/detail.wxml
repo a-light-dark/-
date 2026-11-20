@@ -127,7 +127,7 @@
             data-mine="{{rep.mine}}"
             data-root="{{item.id}}"
             data-parent="1"
-            bindlongpress="onCommentLongPress"
+            catchlongpress="onCommentLongPress"
           >
             <image wx:if="{{rep.avatarIsImage}}" class="avatar small" src="{{rep.avatar}}" mode="aspectFill" />
             <view wx:else class="avatar small">{{rep.avatar}}</view>

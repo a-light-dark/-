@@ -78,6 +78,7 @@ const ACTION_LABEL = {
   'comments.remove': '删评论',
   'reports.dismiss': '忽略举报',
   'reports.removePost': '举报删帖',
+  'reports.removeComment': '举报删评论',
   'users.ban': '封禁用户',
   'users.unban': '解封用户',
   'feedback.resolve': '处理反馈',

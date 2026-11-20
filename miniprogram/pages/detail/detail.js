@@ -215,6 +215,10 @@ Page({
 
   // ===== 别人的帖子：举报 =====
   onReport() {
+    this.reportContent('')
+  },
+
+  reportContent(commentId) {
     const post = this.data.post
     if (!post) return
     wx.showActionSheet({
@@ -222,7 +226,7 @@ Page({
       success: (res) => {
         const reason = api.REPORT_REASONS[res.tapIndex]
         wx.showLoading({ title: '提交中', mask: true })
-        api.reportPost(post.id, reason)
+        api.reportPost(post.id, reason, commentId)
           .then((r) => {
             wx.hideLoading()
             wx.showToast({ title: r.duplicate ? '你已经举报过啦' : '已收到举报，谢谢你', icon: 'none' })
@@ -285,7 +289,7 @@ Page({
     const id = String(ds.id || '')
     if (!id) return
     const items = ['复制', '回复']
-    if (ds.mine === true || ds.mine === 'true') items.push('删除')
+    items.push(ds.mine === true || ds.mine === 'true' ? '删除' : '举报评论')
     wx.showActionSheet({
       itemList: items,
       success: (res) => {
@@ -296,6 +300,8 @@ Page({
           this.startReply(String(ds.root || id), String(ds.nick || ''))
         } else if (label === '删除') {
           this.confirmDeleteComment(ds)
+        } else if (label === '举报评论') {
+          this.reportContent(id)
         }
       },
     })

@@ -62,9 +62,9 @@
       <view class="section-title">最近举报</view>
       <view wx:for="{{dash.recentReports}}" wx:key="id" class="rep-row" bindtap="goReports">
         <view class="rep-main">
-          <view class="rep-reason">【{{item.reason}}】</view>
-          <view class="rep-text">{{item.post ? item.post.content : '帖子已经被删除了'}}</view>
-          <view class="rep-meta">{{item.post ? item.post.nickname : ''}}</view>
+          <view class="rep-reason">【{{item.targetType === 'comment' ? '评论' : '帖子'}} · {{item.reason}}】</view>
+          <view class="rep-text">{{item.target ? item.target.content : (item.post ? item.post.content : '内容已删除')}}</view>
+          <view class="rep-meta">{{item.target ? item.target.nickname : (item.post ? item.post.nickname : '')}}</view>
         </view>
         <view class="rep-arrow">›</view>
       </view>

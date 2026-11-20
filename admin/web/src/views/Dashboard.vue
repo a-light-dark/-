@@ -50,16 +50,16 @@
       <el-table :data="data.recentReports || []" size="large" empty-text="暂时没有举报，圈子很干净">
         <el-table-column label="理由" width="110">
           <template #default="{ row }">
-            <span class="tag-reason">{{ row.reason }}</span>
+            <span class="tag-reason">{{ row.targetType === 'comment' ? '评论' : '帖子' }} · {{ row.reason }}</span>
           </template>
         </el-table-column>
         <el-table-column label="被举报内容">
           <template #default="{ row }">
-            <div class="clamp-2">{{ (row.post && row.post.content) || '（帖子已删除）' }}</div>
+            <div class="clamp-2">{{ (row.target || row.post)?.content || '（内容已删除）' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="作者" width="140">
-          <template #default="{ row }">{{ (row.post && row.post.nickname) || '—' }}</template>
+          <template #default="{ row }">{{ (row.target || row.post)?.nickname || '—' }}</template>
         </el-table-column>
         <el-table-column label="时间" width="120">
           <template #default="{ row }">{{ time(row.createdAt) }}</template>

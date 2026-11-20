@@ -2,3 +2,5 @@
 require('./time.test')
 require('./normalize.test')
 require('./limit.test')
+require('./moderation.test')
+require('./maintenance.test')

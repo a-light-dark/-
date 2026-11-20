@@ -26,7 +26,7 @@
 
     <view class="card bak-card" wx:for="{{list}}" wx:key="id">
       <view class="bak-main">
-        <view class="bak-title">备份 · {{item.time}}</view>
+        <view class="bak-title">{{item.source === 'auto' ? '自动备份' : '手动备份'}} · {{item.time}}</view>
         <view class="bak-desc">{{item.sizeLabel}}</view>
       </view>
       <view class="bak-actions">

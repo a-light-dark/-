@@ -934,16 +934,16 @@ function deletePost(postId) {
 // 举报理由（详情页弹菜单用）
 const REPORT_REASONS = ['垃圾广告', '色情低俗', '人身攻击', '不实信息', '其他']
 
-function reportPost(postId, reason) {
+function reportPost(postId, reason, commentId = '') {
   const id = String(postId || '')
   return run(function () {
-    return wx.cloud.callFunction({ name: 'reportPost', data: { postId: id, reason: reason } }).then(function (res) {
+    return wx.cloud.callFunction({ name: 'reportPost', data: { postId: id, reason, commentId } }).then(function (res) {
       const result = res.result || {}
       if (!result.ok) throw new Error(result.msg || '举报失败')
       return { ok: true, duplicate: !!result.duplicate }
     })
   }, function () {
-    return { ok: true }
+    throw new Error('云服务暂不可用，请稍后重试举报')
   })
 }
 
@@ -1739,21 +1739,22 @@ function adminAnnouncements() { return callAdmin('announcements.list') }
 
 // 举报列表走 adminApi（reports 集合是「所有用户不可读写」，客户端读不到，只能服务端代读）
 function adminReportsList(page) {
-  return callAdmin('reports.list', { page: page || 1, pageSize: 20 }).then(function (res) {
+  return callAdmin('reports.list', { page: page || 1, pageSize: 20, includeComments: true }).then(function (res) {
     const rows = res.list || []
     const posts = rows.map(function (r) { return r.post }).filter(Boolean)
     return resolveImages(posts).then(function (withImg) {
       const byId = {}
       withImg.forEach(function (p) { byId[p.id] = p })
       const list = rows.map(function (r) {
-        const p = r.post ? (byId[r.post.id] || r.post) : null
+        const p = r.targetType === 'comment' ? r.target : (r.post && (byId[r.post.id] || r.post))
         return {
           id: r.id,
           postId: r.postId,
+          targetType: r.targetType || 'post',
           reason: r.reason,
           createdAt: r.createdAt,
           time: format.relativeTime(r.createdAt),
-          post: p ? {
+          target: p ? {
             id: p.id,
             content: p.content,
             nickname: p.nickname,
@@ -1795,6 +1796,7 @@ function adminSettings() { return callAdmin('settings.get') }
 function adminSetSetting(key, value) { return callAdmin('settings.set', { key: key, value: value }) }
 function adminAuditList(page) { return callAdmin('audit.list', { page: page || 1, pageSize: 20 }) }
 function adminDismissReport(id) { return callAdmin('reports.dismiss', { id: id }) }
+function adminReportRemoveComment(id) { return callAdmin('reports.removeComment', { id }) }
 function adminReportRemovePost(postId) { return callAdmin('reports.removePost', { postId: postId }) }
 function adminFeedbackResolve(id) { return callAdmin('feedback.resolve', { id: id }) }
 function adminTrashList(page) { return callAdmin('trash.list', { page: page || 1, pageSize: 20 }) }
@@ -2021,6 +2023,7 @@ module.exports = {
   adminFeedbackList: adminFeedbackList,
   adminDismissReport: adminDismissReport,
   adminReportRemovePost: adminReportRemovePost,
+  adminReportRemoveComment,
   adminFeedbackResolve: adminFeedbackResolve,
   adminTrashList: adminTrashList,
   adminTrashRestore: adminTrashRestore,

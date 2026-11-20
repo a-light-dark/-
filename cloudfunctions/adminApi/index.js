@@ -7,6 +7,7 @@ const cloud = require('wx-server-sdk')
 const { normalizeText } = require('./lib/normalize')
 const crypto = require('crypto')
 const { dayStartCN, seriesDays } = require('./lib/time')
+const { BACKUP_COLLECTIONS, parseBackup, saveBackup, isDailyTimer, runDaily } = require('./lib/maintenance')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -102,7 +103,7 @@ const ROLE_LABEL = { owner: '圈主', developer: '开发者', admin: '管理员'
 
 // 会改动数据的动作（开发者调用时走审核）
 const MUTATIONS = [
-  'posts.setTop', 'posts.remove', 'comments.remove', 'reports.dismiss', 'reports.removePost',
+  'posts.setTop', 'posts.remove', 'comments.remove', 'reports.dismiss', 'reports.removePost', 'reports.removeComment',
   'users.ban', 'users.unban', 'users.setRole', 'feedback.resolve', 'feedback.remove',
   'announcements.create', 'announcements.update', 'announcements.remove', 'settings.set',
   'trash.restore', 'trash.purge', 'wordfilters.add', 'wordfilters.remove',
@@ -113,7 +114,7 @@ const MUTATIONS = [
 ]
 
 const OPERATOR_READ = ['security.list', 'dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'audit.list', 'trash.list', 'wordfilters.list', 'posts.trace', 'analytics.overview', 'ads.list']
-const OPERATOR_WRITE = ['posts.remove', 'posts.setTop', 'comments.remove', 'reports.dismiss', 'reports.removePost', 'feedback.resolve', 'announcements.create', 'announcements.update', 'announcements.remove', 'wordfilters.add', 'wordfilters.remove', 'ads.save', 'ads.remove', 'ads.toggle']
+const OPERATOR_WRITE = ['posts.remove', 'posts.setTop', 'comments.remove', 'reports.dismiss', 'reports.removePost', 'reports.removeComment', 'feedback.resolve', 'announcements.create', 'announcements.update', 'announcements.remove', 'wordfilters.add', 'wordfilters.remove', 'ads.save', 'ads.remove', 'ads.toggle']
 const ANALYST_READ = ['security.list', 'dashboard', 'posts.list', 'comments.list', 'reports.list', 'users.list', 'feedback.list', 'announcements.list', 'settings.get', 'trash.list', 'wordfilters.list', 'analytics.overview', 'ads.list']
 
 function allowRole(role, action) {
@@ -219,20 +220,7 @@ async function dashboard(event) {
   // 最近 5 条举报 + 帖子信息
   const repRes = await db.collection('reports').orderBy('createdAt', 'desc').limit(5).get()
   const reports = repRes.data || []
-  const postIds = reports.map(function (r) { return r.postId }).filter(Boolean)
-  let postsArr = []
-  if (postIds.length) {
-    const pRes = await db.collection('posts').where({ _id: _.in(postIds) }).limit(100).get()
-    postsArr = pRes.data || []
-  }
-  const postMap = {}
-  postsArr.forEach(function (p) {
-    postMap[p._id] = {
-      content: String(p.content || '').slice(0, 60),
-      nickname: p.nickname,
-      avatar: p.avatar,
-    }
-  })
+  const recentReports = await reportRows(reports)
 
   const payload = {
     ok: true,
@@ -247,9 +235,7 @@ async function dashboard(event) {
       todayComments: todayComments.total,
       trashCount: trashCount,
       wordCount: wordCount,
-      recentReports: reports.map(function (r) {
-        return { id: r._id, reason: r.reason, createdAt: ts(r.createdAt), post: postMap[r.postId] || null }
-      }),
+      recentReports,
     },
   }
   dashCache = { at: Date.now(), data: payload }
@@ -585,23 +571,6 @@ async function wordsRemove(id) {
 
 // ============ 数据备份 ============
 // 把核心集合导成 JSON 传到云存储 backups/ 下，管理台可下载链接
-const BACKUP_COLLECTIONS = [
-  'posts', 'comments', 'orders', 'users', 'likes', 'favorites',
-  'reports', 'notices', 'feedback', 'follows', 'reviews',
-  'announcements', 'bans', 'settings', 'audit_logs', 'trash', 'wordfilters',
-  'ads', 'admin_accounts', 'approvals',
-]
-
-async function fetchAll(name) {
-  const out = []
-  for (let page = 0; page < 20; page++) {
-    const res = await db.collection(name).skip(page * 1000).limit(1000).get()
-    out.push.apply(out, res.data || [])
-    if (!(res.data || []).length || (res.data || []).length < 1000) break
-  }
-  return out
-}
-
 async function securityList(event) {
   const page = Math.max(1, Number(event && event.page) || 1)
   const pageSize = Math.min(50, Math.max(10, Number(event && event.pageSize) || 20))
@@ -635,28 +604,8 @@ async function securityList(event) {
 }
 
 async function backupCreate() {
-  const out = {}
-  for (let i = 0; i < BACKUP_COLLECTIONS.length; i++) {
-    const name = BACKUP_COLLECTIONS[i]
-    try {
-      out[name] = await fetchAll(name)
-    } catch (err) {
-      console.warn('备份读取失败（跳过）', name, err && err.errCode)
-      out[name] = []
-    }
-  }
-  out.exportedAt = new Date().toISOString()
-  const json = JSON.stringify(out)
-  if (json.length > 8 * 1024 * 1024) {
-    return { ok: false, msg: '数据太大（超过 8MB），先清理一些再备份' }
-  }
-  const tsStr = new Date().toISOString().replace(/[:.]/g, '-')
-  const cloudPath = 'backups/backup-' + tsStr + '.json'
-  const up = await cloud.uploadFile({ cloudPath: cloudPath, fileContent: Buffer.from(json, 'utf8') })
-  const added = await db.collection('backups').add({
-    data: { fileID: up.fileID, size: json.length, createdAt: db.serverDate() },
-  })
-  return { ok: true, id: added._id, size: json.length }
+  const backup = await saveBackup(db, cloud)
+  return { ok: true, id: backup.id, size: backup.size }
 }
 
 async function backupList() {
@@ -671,7 +620,7 @@ async function backupList() {
   return {
     ok: true,
     list: (listRes.data || []).map(function (b) {
-      return { id: b._id, size: b.size || 0, createdAt: ts(b.createdAt) }
+      return { id: b._id, size: b.size || 0, source: b.source || 'manual', createdAt: ts(b.createdAt) }
     }),
     total: countRes.total,
   }
@@ -727,7 +676,7 @@ async function backupRestore(event) {
   let json
   try {
     const f = await cloud.downloadFile({ fileID: fileID })
-    json = JSON.parse(f.fileContent.toString('utf8'))
+    json = parseBackup(f.fileContent)
   } catch (err) {
     return { ok: false, msg: '读备份文件失败：' + ((err && (err.errMsg || err.message)) || '未知错误') }
   }
@@ -834,12 +783,69 @@ async function backupRestore(event) {
 }
 
 // ============ 举报处理 ============
+// 旧举报只有 postId。分别查两类目标，避免把评论举报误作删帖依据。
+async function reportRows(reports) {
+  async function targets(type, collection) {
+    const ids = reports.filter(r => (r.targetType || 'post') === type)
+      .map(r => type === 'comment' ? r.commentId : r.postId)
+    if (!ids.length) return new Map()
+    const rows = await db.collection(collection).where({ _id: _.in([...new Set(ids)]) }).limit(100).get()
+    return new Map(rows.data.map(row => [row._id, {
+      id: row._id, content: row.content, nickname: row.nickname, avatar: row.avatar,
+      images: row.images || [], createdAt: ts(row.createdAt),
+    }]))
+  }
+  const [posts, comments] = await Promise.all([targets('post', 'posts'), targets('comment', 'comments')])
+  return reports.map(r => {
+    const isComment = r.targetType === 'comment'
+    const target = (isComment ? comments.get(r.commentId) : posts.get(r.postId)) || null
+    return { id: r._id, postId: r.postId, commentId: r.commentId || '', targetType: isComment ? 'comment' : 'post',
+      reason: r.reason, createdAt: ts(r.createdAt), target, post: isComment ? null : target }
+  })
+}
+
+async function removeReportedComment(id, actor) {
+  if (!id) return { ok: false, msg: '缺少举报记录' }
+  const reports = db.collection('reports')
+  const report = (await reports.where({ _id: id, targetType: 'comment' }).limit(1).get()).data[0]
+  if (!report) return { ok: false, msg: '评论举报不存在或已处理' }
+  const { commentId, postId } = report
+  const target = db.collection('comments').where({ _id: commentId, postId })
+  if ((await target.count()).total) {
+    const trashId = crypto.randomBytes(16).toString('hex')
+    await db.runTransaction(async tx => {
+      const ref = tx.collection('comments').doc(commentId)
+      const { data } = await ref.get()
+      if (!data || data.postId !== postId) throw new Error('评论已发生变化，请刷新')
+      await tx.collection('trash').doc(trashId).set({ data: {
+        type: 'comment', docId: commentId, data, deletedAt: db.serverDate(),
+        deletedBy: cloud.getWXContext().OPENID || actor.name,
+      } })
+      await ref.remove()
+      await tx.collection('posts').doc(postId).update({ data: { commentCount: _.inc(-1) } })
+    })
+  }
+  // 删根评论也保留其他人的回复，让它们仍可被阅读和回复。
+  await db.collection('comments').where({ postId, parentId: commentId }).update({ data: { parentId: '' } })
+  const related = reports.where({ postId, commentId, targetType: 'comment' })
+  for (;;) {
+    const { data } = await related.limit(50).get()
+    if (!data.length) break
+    await Promise.all(data.map(async row => {
+      const result = await reports.doc(row._id).remove()
+      if (result.stats.removed) await sendSystemNotice(row._openid, '你举报的评论已删除，感谢反馈。', postId, 'reportReplyText')
+    }))
+  }
+  return { ok: true }
+}
+
 async function reportsList(event) {
   const page = Math.max(1, Number(event && event.page) || 1)
   const pageSize = Math.min(50, Math.max(5, Number(event && event.pageSize) || 20))
   // 不查总数：多取一条就知道还有没有下一页（count 会全表扫）
-  const res = await db
-    .collection('reports')
+  let query = db.collection('reports')
+  if (!event.includeComments) query = query.where({ targetType: _.neq('comment') })
+  const res = await query
     .orderBy('createdAt', 'desc')
     .skip((page - 1) * pageSize)
     .limit(pageSize + 1)
@@ -847,28 +853,9 @@ async function reportsList(event) {
   const rows = res.data || []
   const hasMore = rows.length > pageSize
   const reports = rows.slice(0, pageSize)
-  const postIds = reports.map(function (r) { return r.postId }).filter(Boolean)
-  let posts = []
-  if (postIds.length) {
-    const pRes = await db.collection('posts').where({ _id: _.in(postIds) }).limit(100).get()
-    posts = pRes.data || []
-  }
-  const postMap = {}
-  posts.forEach(function (p) {
-    postMap[p._id] = {
-      id: p._id,
-      content: p.content,
-      nickname: p.nickname,
-      avatar: p.avatar,
-      images: p.images || [],
-      createdAt: ts(p.createdAt),
-    }
-  })
   return {
     ok: true,
-    list: reports.map(function (r) {
-      return { id: r._id, postId: r.postId, reason: r.reason, createdAt: ts(r.createdAt), post: postMap[r.postId] || null }
-    }),
+    list: await reportRows(reports),
     page: page,
     pageSize: pageSize,
     hasMore: hasMore,
@@ -1597,6 +1584,9 @@ async function adsToggle(event) {
 
 // ============ exports.main ============
 exports.main = async (event) => {
+  if (isDailyTimer(event, process.env.TRIGGER_SRC, cloud.getWXContext().OPENID)) {
+    return runDaily(db, cloud)
+  }
   const { OPENID } = cloud.getWXContext()
   const action = String(event.action || '')
 
@@ -1673,6 +1663,10 @@ exports.main = async (event) => {
       case 'reports.dismiss':
         res = await dismissReport(event.id)
         if (res.ok) await audit('reports.dismiss', 'report', event.id, '')
+        break
+      case 'reports.removeComment':
+        res = await removeReportedComment(event.id, actor)
+        if (res.ok) await audit('reports.removeComment', 'report', event.id, '')
         break
       case 'reports.removePost': {
         // 先记下所有举报人（removePost 会连举报记录一起清掉，后查就没了）

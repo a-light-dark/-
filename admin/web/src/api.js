@@ -117,8 +117,9 @@ export async function callAdmin(action, payload = {}) {
 // ===== 具体接口（页面直接用这几个）=====
 export const fetchDashboard = () => callAdmin('dashboard')
 
-export const fetchReports = (page = 1, pageSize = 20) => callAdmin('reports.list', { page, pageSize })
+export const fetchReports = (page = 1, pageSize = 20) => callAdmin('reports.list', { page, pageSize, includeComments: true })
 export const dismissReport = (id) => callAdmin('reports.dismiss', { id })
+export const removeReportedComment = (id) => callAdmin('reports.removeComment', { id })
 export const removeReportedPost = (postId) => callAdmin('reports.removePost', { postId })
 
 export const fetchPosts = (page = 1, pageSize = 20, keyword = '') => callAdmin('posts.list', { page, pageSize, keyword })
